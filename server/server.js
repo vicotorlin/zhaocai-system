@@ -1002,7 +1002,7 @@ app.get("/api/admin/users", async (req, res) => {
 
 // 开发接口：更新用户名称
 // 开发接口：更新用户名称
-app.patch("/api/dev/update-user-name", async (req, res) => {
+app.post("/api/dev/update-user-name", async (req, res) => {
   const { account, name } = req.body;
   if (!account || !name) return res.json({ success: false, message: "参数缺失" });
   const result = await db.updateUserName(account, name);
