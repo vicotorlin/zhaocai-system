@@ -1448,6 +1448,10 @@ async function seedDefaultUsers() {
   }
 }
 
+// Railway 健康检查
+app.get('/', (req, res) => res.send('OK'));
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
 app.listen(PORT, () => {
   seedDefaultUsers();
   // 初始化 Supabase
