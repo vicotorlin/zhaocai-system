@@ -13,3 +13,7 @@
     [开发模式] - 验证码将直接返回
 ============================================
 [Seed] 已创建默认用户: 794474441@qq.com (buyer)
+[登录] 794474441@qq.com (buyer)
+[DEV] 创建用户: test_s@test.com (supplier)
+[登录] test_s@test.com (supplier)
+[项目] ZB-001 Supabase测试 (by 794474441@qq.com)
