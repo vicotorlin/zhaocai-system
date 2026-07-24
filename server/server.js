@@ -1001,10 +1001,12 @@ app.get("/api/admin/users", async (req, res) => {
 
 
 // 开发接口：更新用户名称
+// 开发接口：更新用户名称
 app.patch("/api/dev/update-user-name", async (req, res) => {
   const { account, name } = req.body;
   if (!account || !name) return res.json({ success: false, message: "参数缺失" });
-  const result = await db.updateUserName(account, name);`n  if (!result) return res.json({ success: false, message: "更新失败" });
+  const result = await db.updateUserName(account, name);
+  if (!result) return res.json({ success: false, message: "更新失败" });
   res.json({ success: true, message: "名称已更新" });
 });
 app.post("/api/dev/create-user", async (req, res) => {
