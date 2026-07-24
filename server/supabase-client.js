@@ -384,22 +384,6 @@ async function updateUserStatus(account, status) {
 }
 
 
-async function updateUserName(account, name) {
-  if (!supabaseAvailable) {
-    const user = memoryDb.users.find(u => u.account === account);
-    if (!user) return null;
-    user.name = name;
-    return user;
-  }
-  const { data, error } = await supabaseAdmin
-    .from("users")
-    .update({ name })
-    .eq("account", account)
-    .select()
-    .single();
-  if (error) return null;
-  return data;
-}
 module.exports = {
   initSupabase,
   isAvailable,
@@ -430,5 +414,4 @@ module.exports = {
   // 辅助
   getNextProjectId,
   updateUserStatus,
-}`n  updateUserName,
 };
