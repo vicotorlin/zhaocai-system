@@ -116,10 +116,10 @@ app.post("/api/send-code", async (req, res) => {
   // Supabase 存储
   await db.saveVerificationCode(account, code, expiresAt).catch(e => console.warn("[DB] saveCode:", e.message));
 
-  if (!IS_PROD) {
-    console.log("[DEV] " + account + " -> " + code);
-    return res.json({ success: true, message: "验证码已发送（开发模式）", code, dev: true });
-  }
+  console.log("[CODE] " + account + " -> " + code);
+
+
+
 
   if (type === "email") {
     const t = getTransporter();
