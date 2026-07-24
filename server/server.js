@@ -15,7 +15,7 @@ const sms = require("./sms-client");
 
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || "development";
-const IS_PROD = NODE_ENV === "production";
+const IS_PROD = false; // Force dev mode for Railway;
 
 const SMS_CONFIG = {
   accessKeyId: process.env.SMS_ACCESS_KEY_ID || "",
@@ -1459,6 +1459,9 @@ async function seedDefaultUsers() {
 }
 
 // Railway 健康检查
+
+// 版本检查端点
+app.get("/api/version", (req, res) => res.json({ commit: "d600951", time: new Date().toISOString() }));
 app.get('/', (req, res) => res.send('OK'));
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
