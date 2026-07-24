@@ -1,0 +1,1 @@
+﻿var fs=require("fs");var js=JSON.parse(fs.readFileSync("work/js_all.json","utf8"));console.log("=== Init code (last 15 lines) ===");for(var i=js.length-15;i<js.length;i++)console.log(i+":",js[i].substring(0,120));

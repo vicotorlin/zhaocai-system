@@ -1,0 +1,34 @@
+﻿const fs = require("fs");
+let srv = fs.readFileSync("server/server.js", "utf8");
+
+let devBlock = "\n// ---------- 开发：直接创建用户（跳过验证码） ----------\n";
+devBlock += "app.post(\"/api/dev/create-user\", (req, res) => {\n";
+devBlock += "  const { role, account, password } = req.body;\n";
+devBlock += "  if (!role || !account || !password) return res.json({ success: false, message: \"参数不完整\" });\n";
+devBlock += "  const validRoles = [\"supplier\", \"buyer\", \"reviewer\"];\n";
+devBlock += "  if (!validRoles.includes(role)) return res.json({ success: false, message: \"无效的用户身份\" });\n";
+devBlock += "  if (userStore[account]) return res.json({ success: false, message: \"账号已存在\" });\n";
+devBlock += "  userStore[account] = { role, account, password, createdAt: new Date().toISOString() };\n";
+devBlock += "  console.log(\"[DEV] 创建用户:\", account, \"角色:\", role);\n";
+devBlock += "  res.json({ success: true, message: \"用户创建成功\", data: { account, role } });\n";
+devBlock += "});\n\n";
+devBlock += "// ---------- 开发：添加测试项目 ----------\n";
+devBlock += "app.post(\"/api/dev/create-project\", (req, res) => {\n";
+devBlock += "  const { buyerAccount, projectName, buyer, budget, deadline } = req.body;\n";
+devBlock += "  if (!buyerAccount || !projectName) return res.json({ success: false, message: \"参数不完整\" });\n";
+devBlock += "  const id = \"ZB-\" + String(projectNextId++).padStart(3, \"0\");\n";
+devBlock += "  const project = {\n";
+devBlock += "    id, buyerAccount, projectName, buyer: buyer || buyerAccount,\n";
+devBlock += "    budget: Number(budget) || 0,\n";
+devBlock += "    deadline: deadline || new Date(Date.now() + 7*86400000).toISOString().slice(0, 10),\n";
+devBlock += "    status: \"open\", createdAt: new Date().toISOString(),\n";
+devBlock += "  };\n";
+devBlock += "  projectStore.push(project);\n";
+devBlock += "  console.log(\"[DEV] 创建项目:\", id, projectName);\n";
+devBlock += "  res.json({ success: true, data: project });\n";
+devBlock += "});\n";
+
+let marker = "// ===================== 启动服务 =====================";
+srv = srv.replace(marker, devBlock + "\n" + marker);
+fs.writeFileSync("server/server.js", srv, "utf8");
+console.log("Patched! New length:", srv.length, "Has dev:", srv.includes("create-user"));

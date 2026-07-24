@@ -1,0 +1,10 @@
+{
+  "name": "zhaocai-system",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "cd server && node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

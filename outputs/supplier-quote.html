@@ -1,0 +1,586 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>供应商报价 - 招采管理系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                         "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background: #f0f2f5; color: #333; min-height: 100vh;
+        }
+
+        /* ===== 顶部导航 ===== */
+        .topbar {
+            background: linear-gradient(135deg, #0f2027, #2c5364);
+            color: #fff; padding: 0 28px; height: 56px;
+            display: flex; align-items: center; justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15); position: sticky; top: 0; z-index: 100;
+        }
+        .topbar .logo { font-size: 18px; font-weight: 600; letter-spacing: 1px; display: flex; align-items: center; gap: 10px; }
+        .topbar .logo .dot { width: 8px; height: 8px; background: #27ae60; border-radius: 50%; box-shadow: 0 0 8px rgba(39,174,96,0.6); }
+        .topbar .user-area { display: flex; align-items: center; gap: 16px; font-size: 14px; }
+        .topbar .user-area .role-tag {
+            background: rgba(255,255,255,0.15); padding: 3px 12px; border-radius: 12px; font-size: 12px;
+        }
+        .topbar .btn-logout {
+            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25);
+            color: #fff; padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 13px;
+            transition: all 0.2s;
+        }
+        .topbar .btn-logout:hover { background: rgba(255,255,255,0.2); }
+
+        /* ===== 侧栏 ===== */
+        .layout { display: flex; min-height: calc(100vh - 56px); }
+        .sidebar { width: 220px; background: #fff; border-right: 1px solid #e8e8e8; padding: 16px 0; flex-shrink: 0; }
+        .sidebar .menu-item {
+            display: flex; align-items: center; gap: 10px; padding: 12px 24px;
+            font-size: 14px; color: #555; cursor: pointer; transition: all 0.15s;
+            border-left: 3px solid transparent;
+        }
+        .sidebar .menu-item:hover { background: #f5f7fa; color: #2c5364; }
+        .sidebar .menu-item.active {
+            background: #eef4f7; color: #2c5364; font-weight: 600;
+            border-left-color: #2c5364;
+        }
+        .sidebar .menu-item .icon { font-size: 16px; width: 20px; text-align: center; }
+
+        /* ===== 主内容 ===== */
+        .main { flex: 1; padding: 24px 28px; overflow-y: auto; }
+
+        .page-title { font-size: 20px; font-weight: 600; color: #1a1a2e; margin-bottom: 20px; }
+
+        /* ===== 统计卡片 ===== */
+        .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+        .stat-card {
+            background: #fff; border-radius: 10px; padding: 20px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06); display: flex; align-items: center; gap: 16px;
+        }
+        .stat-card .stat-icon {
+            width: 48px; height: 48px; border-radius: 10px; display: flex;
+            align-items: center; justify-content: center; font-size: 22px;
+        }
+        .stat-card .stat-icon.blue   { background: #e8f0fe; color: #2c5364; }
+        .stat-card .stat-icon.green  { background: #e6f7e6; color: #27ae60; }
+        .stat-card .stat-icon.orange { background: #fef3e6; color: #e67e22; }
+        .stat-card .stat-icon.red    { background: #fde9e9; color: #e74c3c; }
+        .stat-card .stat-info .num  { font-size: 24px; font-weight: 700; color: #1a1a2e; }
+        .stat-card .stat-info .lbl  { font-size: 13px; color: #999; margin-top: 2px; }
+
+        /* ===== 搜索 & 筛选 ===== */
+        .toolbar {
+            background: #fff; border-radius: 10px; padding: 16px 20px;
+            margin-bottom: 16px; display: flex; align-items: center; gap: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06); flex-wrap: wrap;
+        }
+        .toolbar input, .toolbar select {
+            height: 36px; border: 1px solid #ddd; border-radius: 6px;
+            padding: 0 12px; font-size: 13px; outline: none; transition: border-color 0.2s;
+        }
+        .toolbar input:focus, .toolbar select:focus { border-color: #2c5364; }
+        .toolbar input { flex: 1; min-width: 180px; }
+        .toolbar select { min-width: 130px; cursor: pointer; }
+        .toolbar .btn-search {
+            height: 36px; padding: 0 20px; border: none; border-radius: 6px;
+            background: #2c5364; color: #fff; font-size: 13px; cursor: pointer; transition: all 0.2s;
+        }
+        .toolbar .btn-search:hover { background: #3a6b80; }
+
+        /* ===== 表格 ===== */
+        .table-wrap {
+            background: #fff; border-radius: 10px; overflow: hidden;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        thead { background: #f7f8fa; }
+        th, td { padding: 14px 16px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+        th { font-weight: 600; color: #555; font-size: 13px; white-space: nowrap; }
+        td { color: #333; }
+        tr:hover td { background: #fafbfc; }
+
+        .status {
+            display: inline-block; padding: 3px 10px; border-radius: 10px;
+            font-size: 12px; font-weight: 500;
+        }
+        .status.open     { background: #e6f7e6; color: #27ae60; }
+        .status.progress { background: #fef3e6; color: #e67e22; }
+        .status.closed   { background: #f0f0f0; color: #999; }
+
+        .btn-quote {
+            height: 30px; padding: 0 16px; border: 1px solid #2c5364; border-radius: 6px;
+            background: #fff; color: #2c5364; font-size: 12px; font-weight: 500;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-quote:hover { background: #2c5364; color: #fff; }
+        .btn-quote:disabled { border-color:#ccc; color:#bbb; cursor:not-allowed; background:#f5f5f5; }
+        .btn-detail { height:30px; padding:0 16px; border:1px solid #ddd; border-radius:6px; background:#fff; color:#555; font-size:12px; cursor:pointer; transition:all 0.2s; }
+        .btn-detail:hover { border-color:#2c5364; color:#2c5364; }
+
+        /* ===== Modal ===== */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.45); z-index: 200; align-items: center; justify-content: center;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal {
+            background: #fff; border-radius: 12px; width: 520px; max-width: 95vw;
+            padding: 28px 32px; box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+            animation: modalIn 0.25s ease;
+        }
+        @keyframes modalIn { from { opacity:0; transform: translateY(-20px) scale(0.96); } to { opacity:1; transform: translateY(0) scale(1); } }
+        .modal h3 { font-size: 18px; color: #1a1a2e; margin-bottom: 20px; }
+        .modal .modal-info { background: #f7f8fa; border-radius: 8px; padding: 16px; margin-bottom: 20px; font-size: 13px; line-height: 1.8; color: #555; }
+        .modal .modal-info strong { color: #333; }
+        .modal .form-group { margin-bottom: 16px; }
+        .modal .form-group label { display: block; font-size: 14px; font-weight: 500; color: #333; margin-bottom: 6px; }
+        .modal .form-group input, .modal .form-group textarea {
+            width: 100%; border: 1.5px solid #e0e0e0; border-radius: 6px;
+            padding: 10px 14px; font-size: 14px; outline: none; transition: all 0.2s;
+            font-family: inherit;
+        }
+        .modal .form-group input:focus, .modal .form-group textarea:focus { border-color: #2c5364; }
+        .modal .form-group textarea { resize: vertical; min-height: 80px; }
+        .modal .modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; }
+        .modal .btn-cancel { height: 38px; padding: 0 24px; border: 1px solid #ddd; border-radius: 6px; background: #fff; color: #666; font-size: 14px; cursor: pointer; }
+        .modal .btn-submit-modal { height: 38px; padding: 0 24px; border: none; border-radius: 6px; background: linear-gradient(135deg,#203a43,#2c5364); color: #fff; font-size: 14px; font-weight: 500; cursor: pointer; }
+        .modal .btn-submit-modal:hover { box-shadow: 0 4px 12px rgba(44,83,100,0.3); }
+
+        .toast {
+            position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
+            padding: 12px 28px; border-radius: 8px; font-size: 14px; font-weight: 500;
+            z-index: 999; animation: toastIn 0.3s ease; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+        .toast.success { background: #27ae60; color: #fff; }
+        .toast.error   { background: #e74c3c; color: #fff; }
+        @keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(-12px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: #bbb; }
+        .empty-state .big { font-size: 48px; margin-bottom: 12px; }
+
+        
+
+        /* ===== 侧栏增强 ===== */
+        .menu-group-label {
+            padding: 8px 24px 4px; font-size: 11px; color: #bbb; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .menu-divider { height: 1px; background: #eee; margin: 6px 16px; }
+        .menu-item { cursor: pointer; user-select: none; }
+
+        /* ===== 视图系统 ===== */
+        .view-container { display: none; }
+        .view-container.active { display: block; }
+
+        /* ===== iframe 容器 ===== */
+        .iframe-wrap { background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+        /* ===== 文件上传区 ===== */
+        .upload-section { margin-top: 24px; background: #fff; border-radius: 10px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+        .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+        .section-header h3 { font-size: 16px; color: #1a1a2e; }
+        .section-hint { font-size: 12px; color: #999; }
+        .config-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; padding: 10px 14px; background: #f7f8fa; border-radius: 6px; }
+        .config-bar input { height: 32px; border: 1px solid #ddd; border-radius: 5px; padding: 0 10px; font-size: 12px; outline: none; flex: 1; min-width: 140px; }
+        .config-bar input:focus { border-color: #2c5364; }
+        .btn-connect-sm { height: 32px; padding: 0 14px; border: none; border-radius: 5px; background: #2c5364; color: #fff; font-size: 12px; cursor: pointer; white-space: nowrap; }
+        .config-status { font-size: 11px; }
+        .config-status.ok { color: #27ae60; }
+        .config-status.err { color: #e74c3c; }
+        .drop-zone { border: 2px dashed #d0d5dd; border-radius: 8px; padding: 30px 20px; text-align: center; cursor: pointer; transition: all 0.25s; background: #fafbfc; margin-bottom: 16px; }
+        .drop-zone:hover, .drop-zone.drag-over { border-color: #2c5364; background: #eef4f7; }
+        .drop-zone .icon-upload { font-size: 32px; margin-bottom: 6px; }
+        .drop-zone .title { font-size: 14px; font-weight: 500; color: #333; }
+        .drop-zone .hint { font-size: 12px; color: #999; margin-top: 4px; }
+        .drop-zone .hint strong { color: #2c5364; }
+        .drop-zone input[type='file'] { display: none; }
+        .progress-wrap { display: none; margin-bottom: 16px; }
+        .progress-wrap.active { display: block; }
+        .progress-bar-bg { width: 100%; height: 6px; background: #e8e8e8; border-radius: 3px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; background: linear-gradient(90deg, #27ae60, #2ecc71); border-radius: 3px; transition: width 0.3s; width: 0%; }
+        .progress-info { display: flex; justify-content: space-between; font-size: 11px; color: #888; margin-top: 4px; }
+        .file-list-header { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #333; margin-bottom: 10px; }
+        .fcount { background: #eef4f7; color: #2c5364; padding: 1px 10px; border-radius: 10px; font-size: 11px; }
+        .file-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid #eee; border-radius: 6px; margin-bottom: 6px; font-size: 13px; }
+        .file-item:hover { border-color: #d0d5dd; background: #fafbfc; }
+        .file-icon-sm { width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+        .file-icon-sm.pdf { background: #fde9e9; color: #e74c3c; }
+        .file-icon-sm.zip { background: #fef3e6; color: #e67e22; }
+        .file-icon-sm.cad { background: #e8f0fe; color: #2c5364; }
+        .file-info-sm { flex: 1; min-width: 0; }
+        .file-info-sm .fname { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .file-info-sm .fmeta { font-size: 11px; color: #999; }
+        .file-actions-sm { display: flex; gap: 6px; flex-shrink: 0; }
+        .file-actions-sm button { height: 26px; padding: 0 10px; border-radius: 4px; font-size: 11px; cursor: pointer; border: 1px solid #ddd; background: #fff; color: #555; transition: all 0.15s; }
+        .file-actions-sm button:hover { border-color: #2c5364; color: #2c5364; }
+        .file-actions-sm button.danger:hover { border-color: #e74c3c; color: #e74c3c; }
+
+@media (max-width: 768px) {
+            .sidebar { display: none; }
+            .layout { flex-direction: column; }
+            .main { height: auto; }
+            .stat-cards { grid-template-columns: repeat(2,1fr); }
+            th, td { padding: 10px 8px; font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部栏 -->
+    <div class="topbar">
+        <div class="logo"><span class="dot"></span>招采管理系统</div>
+        <div class="user-area">
+            <span id="displayAccount">--</span>
+            <span class="role-tag" id="displayRole">供应商</span>
+            <button class="btn-logout" onclick="handleLogout()">退出登录</button>
+        </div>
+    </div>
+
+    <div class="layout">
+        <!-- 侧栏 -->
+        <div class="sidebar">
+            <div class="menu-group-label">采购管理</div>
+            <div class="menu-item active" data-view="projects"><span class="icon">📋</span>采购项目</div>
+            <div class="menu-item" data-view="quotes"><span class="icon">📝</span>我的报价</div>
+            <div class="menu-item" data-view="quote-form"><span class="icon">✏️</span>填写报价</div>
+            <div class="menu-divider"></div>
+            <div class="menu-item" data-view="won"><span class="icon">🏆</span>中标结果</div>
+            <div class="menu-item" data-view="stats"><span class="icon">📊</span>数据统计</div>
+            <div class="menu-divider"></div>
+            <div class="menu-item" data-view="settings"><span class="icon">⚙️</span>账户设置</div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="main">
+
+            <!-- ===== 视图：采购项目列表 ===== -->
+            <div class="view-container active" id="view-projects">
+            <div class="page-title">📋 可报价采购项目</div>
+
+            <!-- 统计 -->
+            <div class="stat-cards">
+                <div class="stat-card">
+                    <div class="stat-icon blue">📋</div>
+                    <div class="stat-info"><div class="num" id="statTotal">0</div><div class="lbl">全部项目</div></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green">✅</div>
+                    <div class="stat-info"><div class="num" id="statOpen">0</div><div class="lbl">可报价</div></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon orange">📝</div>
+                    <div class="stat-info"><div class="num" id="statQuoted">0</div><div class="lbl">已报价</div></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon red">🏆</div>
+                    <div class="stat-info"><div class="num" id="statWon">0</div><div class="lbl">已中标</div></div>
+                </div>
+            </div>
+
+            <!-- 搜索 -->
+            <div class="toolbar">
+                <input type="text" id="searchInput" placeholder="🔍 搜索项目名称或编号...">
+                <select id="filterStatus">
+                    <option value="">全部状态</option>
+                    <option value="open">可报价</option>
+                    <option value="progress">进行中</option>
+                    <option value="closed">已截止</option>
+                </select>
+                <button class="btn-search" onclick="filterProjects()">搜索</button>
+            </div>
+
+            <!-- 表格 -->
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>项目编号</th>
+                            <th>项目名称</th>
+                            <th>采购单位</th>
+                            <th>预算金额</th>
+                            <th>截止日期</th>
+                            <th>状态</th>
+                            <th>我的报价</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="projectTableBody"></tbody>
+                </table>
+                <div class="empty-state" id="emptyState" style="display:none;">
+                    <div class="big">📭</div>
+                    <p>暂无匹配的项目</p>
+                </div>
+            </div>
+
+            </div>
+            <!-- ===== 视图：填写报价（React 应用 iframe） ===== -->
+            <div class="view-container" id="view-quote-form">
+                <div class="page-title" style="display:flex;align-items:center;justify-content:space-between;">
+                    <span>✏️ 供应商报价填写</span>
+                    <span style="font-size:12px;color:#999;font-weight:400;">
+                        React App 运行在 <a href="http://localhost:3000" target="_blank" style="color:#2c5364;">localhost:3000</a>
+                    </span>
+                </div>
+                <div class="iframe-wrap">
+                    <iframe id="quoteFormIframe" src="http://localhost:3000" frameborder="0"
+                        style="width:100%;height:calc(100vh - 200px);border:none;border-radius:8px;background:#fff;">
+                    </iframe>
+                </div>
+            </div>
+
+            <!-- ===== 视图：我的报价 ===== -->
+            <div class="view-container" id="view-quotes">
+                <div class="page-title">📝 我的报价记录</div>
+                <div class="empty-state" style="padding:60px;">
+                    <div style="font-size:48px;margin-bottom:12px;">📝</div>
+                    <p style="color:#999;">报价记录将在提交后显示</p>
+                </div>
+            </div>
+
+            <!-- ===== 视图：中标结果 ===== -->
+            <div class="view-container" id="view-won">
+                <div class="page-title">🏆 中标结果</div>
+                <div class="empty-state" style="padding:60px;">
+                    <div style="font-size:48px;margin-bottom:12px;">🏆</div>
+                    <p style="color:#999;">暂无中标记录</p>
+                </div>
+            </div>
+
+            <!-- ===== 视图：数据统计 ===== -->
+            <div class="view-container" id="view-stats">
+                <div class="page-title">📊 数据统计</div>
+                <div class="empty-state" style="padding:60px;">
+                    <div style="font-size:48px;margin-bottom:12px;">📊</div>
+                    <p style="color:#999;">统计数据将在积累数据后展示</p>
+                </div>
+            </div>
+
+            <!-- ===== 视图：账户设置 ===== -->
+            <div class="view-container" id="view-settings">
+                <div class="page-title">⚙️ 账户设置</div>
+                <div class="empty-state" style="padding:60px;">
+                    <div style="font-size:48px;margin-bottom:12px;">⚙️</div>
+                    <p style="color:#999;">账户设置功能开发中</p>
+                </div>
+            </div>
+</div>
+
+    <!-- 报价弹窗 -->
+    <div class="modal-overlay" id="quoteModal">
+        <div class="modal">
+            <h3>📝 提交报价</h3>
+            <div class="modal-info" id="modalProjectInfo"></div>
+            <div class="form-group">
+                <label>报价金额（元）<span style="color:#e74c3c;">*</span></label>
+                <input type="number" id="quoteAmount" placeholder="请输入报价金额" min="0" step="0.01">
+                <div class="error-msg" id="quoteAmountError" style="display:none;font-size:12px;color:#e74c3c;margin-top:4px;"></div>
+            </div>
+            <div class="form-group">
+                <label>报价说明</label>
+                <textarea id="quoteRemark" placeholder="可选：补充说明（交货期、付款方式等）"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal()">取消</button>
+                <button class="btn-submit-modal" onclick="submitQuote()">确认提交</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function () {
+        // ===== 用户信息（从 URL 参数或 sessionStorage 获取） =====
+        var params = new URLSearchParams(window.location.search);
+        var user = {
+            account: params.get("account") || sessionStorage.getItem("zhaocai_user_account") || "供应商用户",
+            role: params.get("role") || sessionStorage.getItem("zhaocai_user_role") || "supplier"
+        };
+        // 保存到 sessionStorage 以便页面刷新后仍可用
+        sessionStorage.setItem("zhaocai_user_account", user.account);
+        sessionStorage.setItem("zhaocai_user_role", user.role);
+
+
+        var roleMap = { supplier: "供应商", buyer: "采购方", reviewer: "评审专家", admin: "管理员" };
+
+        // ===== 视图切换 =====
+        function switchView(viewId) {
+            document.querySelectorAll(".sidebar .menu-item[data-view]").forEach(function(item) {
+                item.classList.remove("active");
+                if (item.getAttribute("data-view") === viewId) item.classList.add("active");
+            });
+            document.querySelectorAll(".view-container").forEach(function(vc) { vc.classList.remove("active"); });
+            var target = document.getElementById("view-" + viewId);
+            if (target) target.classList.add("active");
+        }
+        document.querySelectorAll(".sidebar .menu-item[data-view]").forEach(function(item) {
+            item.addEventListener("click", function() {
+                switchView(this.getAttribute("data-view"));
+            });
+        });
+        switchView("projects");
+        document.getElementById("displayAccount").textContent = user.account;
+        document.getElementById("displayRole").textContent = roleMap[user.role] || user.role;
+
+        // ===== 模拟项目数据 =====
+        var projects = [
+            { id:"ZB-2026-001", name:"2026年度办公设备采购项目", buyer:"XX集团采购部", budget:"500,000", deadline:"2026-07-15", status:"open", myQuote:null },
+            { id:"ZB-2026-002", name:"IT基础设施升级改造项目", buyer:"YY科技有限公司", budget:"1,200,000", deadline:"2026-07-20", status:"open", myQuote:null },
+            { id:"ZB-2026-003", name:"智慧园区安防系统建设", buyer:"ZZ产业发展集团", budget:"800,000", deadline:"2026-07-10", status:"progress", myQuote:650000 },
+            { id:"ZB-2026-004", name:"云计算平台扩容采购", buyer:"AA数据服务公司", budget:"2,500,000", deadline:"2026-06-30", status:"closed", myQuote:null },
+            { id:"ZB-2026-005", name:"企业ERP系统升级改造", buyer:"BB制造有限公司", budget:"900,000", deadline:"2026-07-25", status:"open", myQuote:null },
+            { id:"ZB-2026-006", name:"数据中心网络设备采购", buyer:"CC金融科技", budget:"3,000,000", deadline:"2026-07-18", status:"open", myQuote:null },
+            { id:"ZB-2026-007", name:"网络安全防护体系建设", buyer:"DD政务云平台", budget:"1,600,000", deadline:"2026-06-28", status:"closed", myQuote:1400000 },
+            { id:"ZB-2026-008", name:"智能会议室系统采购", buyer:"EE投资集团", budget:"350,000", deadline:"2026-07-22", status:"open", myQuote:null },
+        ];
+
+        var currentQuoteProjectId = null;
+
+        // ===== 渲染 =====
+        function renderProjects(data) {
+            var tbody = document.getElementById("projectTableBody");
+            var empty = document.getElementById("emptyState");
+
+            if (data.length === 0) {
+                tbody.innerHTML = "";
+                empty.style.display = "block";
+            } else {
+                empty.style.display = "none";
+                tbody.innerHTML = data.map(function (p) {
+                    var statusClass = p.status === "open" ? "open" : p.status === "progress" ? "progress" : "closed";
+                    var statusText = p.status === "open" ? "可报价" : p.status === "progress" ? "进行中" : "已截止";
+                    var quoteCell = p.myQuote ? "¥" + p.myQuote.toLocaleString() : '<span style="color:#bbb;">未报价</span>';
+                    var actionBtn = p.status === "open"
+                        ? '<button class="btn-quote" onclick="openQuoteForm(\'' + p.id + '\')">📝 填写报价</button>'
+                        : '<button class="btn-detail" onclick="viewDetail(\'' + p.id + '\')">查看</button>';
+                    return '<tr>' +
+                        '<td>' + p.id + '</td>' +
+                        '<td><strong>' + p.name + '</strong></td>' +
+                        '<td>' + p.buyer + '</td>' +
+                        '<td>¥' + p.budget + '</td>' +
+                        '<td>' + p.deadline + '</td>' +
+                        '<td><span class="status ' + statusClass + '">' + statusText + '</span></td>' +
+                        '<td>' + quoteCell + '</td>' +
+                        '<td>' + actionBtn + '</td>' +
+                        '</tr>';
+                }).join("");
+            }
+
+            // 更新统计
+            document.getElementById("statTotal").textContent = data.length;
+            document.getElementById("statOpen").textContent = data.filter(function(p){ return p.status === "open"; }).length;
+            document.getElementById("statQuoted").textContent = data.filter(function(p){ return p.myQuote !== null; }).length;
+            document.getElementById("statWon").textContent = data.filter(function(p){ return p.status === "closed" && p.myQuote !== null; }).length;
+        }
+
+        function filterProjects() {
+            var keyword = document.getElementById("searchInput").value.toLowerCase();
+            var status = document.getElementById("filterStatus").value;
+            var filtered = projects.filter(function (p) {
+                var matchKeyword = !keyword || p.name.toLowerCase().includes(keyword) || p.id.toLowerCase().includes(keyword);
+                var matchStatus = !status || p.status === status;
+                return matchKeyword && matchStatus;
+            });
+            renderProjects(filtered);
+        }
+
+        document.getElementById("searchInput").addEventListener("input", filterProjects);
+
+        // ===== 报价弹窗 =====
+        window.openQuoteForm = function (projectId) {
+            var p = projects.find(function (x) { return x.id === projectId; });
+            if (!p) return;
+
+            // 更新 iframe src，传递项目信息
+            var iframe = document.getElementById("quoteFormIframe");
+            var baseUrl = "http://localhost:3000";
+            var params = "?projectId=" + encodeURIComponent(projectId)
+                + "&projectName=" + encodeURIComponent(p.name)
+                + "&buyer=" + encodeURIComponent(p.buyer)
+                + "&budget=" + encodeURIComponent(p.budget);
+            iframe.src = baseUrl + params;
+
+            // 切换到填写报价视图
+            switchView("quote-form");
+        };
+
+        window.closeModal = function () {
+            document.getElementById("quoteModal").classList.remove("show");
+            currentQuoteProjectId = null;
+        };
+
+        window.submitQuote = function () {
+            var amountStr = document.getElementById("quoteAmount").value.trim();
+            var remark = document.getElementById("quoteRemark").value.trim();
+            var errEl = document.getElementById("quoteAmountError");
+
+            if (!amountStr) {
+                errEl.textContent = "请输入报价金额";
+                errEl.style.display = "block";
+                return;
+            }
+            var amount = parseFloat(amountStr);
+            if (isNaN(amount) || amount <= 0) {
+                errEl.textContent = "请输入有效的报价金额";
+                errEl.style.display = "block";
+                return;
+            }
+            if (amount > 100000000) {
+                errEl.textContent = "报价金额不能超过1亿元";
+                errEl.style.display = "block";
+                return;
+            }
+
+            // 更新数据
+            var p = projects.find(function (x) { return x.id === currentQuoteProjectId; });
+            if (p) {
+                p.myQuote = amount;
+                p.status = "progress";
+            }
+
+            showToast("报价提交成功！", "success");
+            closeModal();
+            filterProjects();
+        };
+
+        window.viewDetail = function (projectId) {
+            var p = projects.find(function (x) { return x.id === projectId; });
+            if (p) {
+                var quoteInfo = p.myQuote ? "报价：¥" + p.myQuote.toLocaleString() : "未报价";
+                alert("项目详情\n\n项目编号：" + p.id + "\n项目名称：" + p.name + "\n采购单位：" + p.buyer + "\n预算：¥" + p.budget + "\n截止：" + p.deadline + "\n状态：" + (p.status === "open" ? "可报价" : p.status === "progress" ? "进行中" : "已截止") + "\n" + quoteInfo);
+            }
+        };
+
+        // ===== 退出登录 =====
+        window.handleLogout = function () {
+            if (confirm("确定要退出登录吗？")) {
+                sessionStorage.removeItem("zhaocai_user_account");
+                sessionStorage.removeItem("zhaocai_user_role");
+                window.location.href = "login.html";
+            }
+        };
+
+        // ===== Toast =====
+        function showToast(msg, type) {
+            var el = document.createElement("div");
+            el.className = "toast " + type;
+            el.textContent = msg;
+            document.body.appendChild(el);
+            setTimeout(function () {
+                el.style.opacity = "0";
+                el.style.transition = "opacity 0.3s";
+                setTimeout(function () { el.remove(); }, 300);
+            }, 2000);
+        }
+
+        // ===== 点击遮罩关闭 =====
+        document.getElementById("quoteModal").addEventListener("click", function (e) {
+            if (e.target === this) closeModal();
+        });
+
+        // ===== 初始渲染 =====
+        renderProjects(projects);
+    })();
+    </script>
+<!-- Supabase JS SDK -->
+
+</body>
+</html>

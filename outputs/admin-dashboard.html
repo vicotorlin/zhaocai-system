@@ -1,0 +1,316 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台 - 串标检测 - 招采管理系统</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #f0f2f5; color: #333; min-height: 100vh;
+        }
+        .topbar {
+            background: linear-gradient(135deg, #1a0a0a, #4a1a1a); color:#fff;
+            padding:0 28px; height:56px; display:flex; align-items:center; justify-content:space-between;
+            box-shadow:0 2px 8px rgba(0,0,0,0.2); position:sticky; top:0; z-index:100;
+        }
+        .topbar h1 { font-size:18px; font-weight:600; }
+        .topbar .badge { background:rgba(255,255,255,0.15); padding:4px 14px; border-radius:12px; font-size:12px; }
+
+        .layout { display:flex; min-height:calc(100vh - 56px); }
+        .sidebar {
+            width:200px; background:#fff; border-right:1px solid #e8e8e8; padding:16px 0; flex-shrink:0;
+        }
+        .sidebar .m { padding:12px 20px; font-size:14px; color:#555; cursor:pointer; border-left:3px solid transparent; transition:all 0.15s; }
+        .sidebar .m:hover { background:#f5f7fa; color:#333; }
+        .sidebar .m.active { background:#fff5f5; color:#c0392b; border-left-color:#c0392b; font-weight:600; }
+
+        .main { flex:1; padding:24px; overflow-y:auto; }
+
+        .stat-row { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
+        .stat-card {
+            background:#fff; border-radius:10px; padding:20px; box-shadow:0 1px 4px rgba(0,0,0,0.06);
+            display:flex; align-items:center; gap:14px;
+        }
+        .stat-card .icon { width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; }
+        .stat-card .icon.red { background:#fde9e9; color:#e74c3c; }
+        .stat-card .icon.orange { background:#fef3e6; color:#e67e22; }
+        .stat-card .icon.blue { background:#e8f0fe; color:#2980b9; }
+        .stat-card .icon.green { background:#e6f7e6; color:#27ae60; }
+        .stat-card .num { font-size:24px; font-weight:700; }
+        .stat-card .lbl { font-size:12px; color:#999; }
+
+        .section { background:#fff; border-radius:10px; padding:20px 24px; box-shadow:0 1px 4px rgba(0,0,0,0.06); margin-bottom:20px; }
+        .section h2 { font-size:16px; color:#1a1a2e; margin-bottom:4px; }
+        .section .sub { font-size:12px; color:#999; margin-bottom:16px; }
+
+        table { width:100%; border-collapse:collapse; font-size:13px; }
+        thead { background:#fafafa; }
+        th, td { padding:10px 12px; text-align:left; border-bottom:1px solid #f0f0f0; }
+        th { font-weight:600; color:#666; font-size:12px; white-space:nowrap; }
+        tr:hover td { background:#fafbfc; }
+
+        .risk-badge {
+            display:inline-block; padding:3px 10px; border-radius:10px; font-size:11px; font-weight:600;
+        }
+        .risk-0 { background:#e6f7e6; color:#27ae60; }
+        .risk-1 { background:#fef9e7; color:#b7950b; }
+        .risk-2 { background:#fef3e6; color:#e67e22; }
+        .risk-3 { background:#fde9e9; color:#e74c3c; }
+
+        .row-highlight { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100% { background:#fff; } 50% { background:#fff5f5; } }
+
+        .tag { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; margin:1px 2px; }
+        .tag-ip { background:#fde9e9; color:#c0392b; }
+        .tag-ua { background:#fef3e6; color:#e67e22; }
+        .tag-subnet { background:#fff9e6; color:#b7950b; }
+
+        .btn {
+            padding:8px 18px; border:none; border-radius:6px; font-size:13px; cursor:pointer; transition:0.2s;
+        }
+        .btn-sm { padding:5px 12px; font-size:11px; border-radius:4px; }
+        .btn-primary { background:#c0392b; color:#fff; }
+        .btn-primary:hover { background:#a93226; }
+        .btn-outline { background:#fff; border:1px solid #ddd; color:#555; }
+        .btn-outline:hover { border-color:#c0392b; color:#c0392b; }
+
+        .flex-row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+
+        .ip-cell { font-family: "Consolas", "Courier New", monospace; font-size:12px; }
+
+        .empty { text-align:center; padding:40px; color:#ccc; font-size:14px; }
+
+        .toast {
+            position:fixed; top:70px; left:50%; transform:translateX(-50%);
+            padding:12px 28px; border-radius:8px; font-size:14px; font-weight:500;
+            z-index:9999; animation:toastIn 0.3s; box-shadow:0 4px 16px rgba(0,0,0,0.15);
+        }
+        .toast.success { background:#27ae60; color:#fff; }
+        .toast.error { background:#e74c3c; color:#fff; }
+        @keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(-12px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <h1>🛡 招采管理系统 - 管理员后台</h1>
+    <span class="badge">串标检测 v1.0</span>
+</div>
+
+<div class="layout">
+    <div class="sidebar">
+        <div class="m active" onclick="loadQuotes()">📋 报价列表</div>
+        <div class="m" onclick="loadStats()">📊 统计概览</div>
+        <div class="m" onclick="resetData()">🔄 重置数据</div>
+    </div>
+
+    <div class="main" id="mainContent">
+        <div class="section">
+            <h2>📋 所有报价</h2>
+            <p class="sub">自动检测 IP 和 User-Agent 异常，标记疑似串标行为</p>
+            <div class="flex-row" style="margin-bottom:16px;">
+                <button class="btn btn-primary" onclick="loadQuotes()">🔄 刷新</button>
+                <button class="btn btn-outline btn-sm" onclick="addTestData()">🧪 添加测试数据</button>
+                <span style="font-size:12px; color:#999; margin-left:auto;" id="lastUpdate"></span>
+            </div>
+            <div id="tableContainer">
+                <div class="empty">加载中...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const API = "http://localhost:3001";
+
+async function api(path, method, body) {
+    const opts = { method, headers: { "Content-Type": "application/json" } };
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(API + path, opts);
+    return r.json();
+}
+
+function toast(msg, type) {
+    const el = document.createElement("div");
+    el.className = "toast " + (type || "success");
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(() => { el.style.opacity = "0"; el.style.transition = "opacity 0.3s"; setTimeout(() => el.remove(), 300); }, 2000);
+}
+
+function riskLabel(lv) {
+    if (lv === 3) return "🔴 高风险";
+    if (lv === 2) return "🟠 中风险";
+    if (lv === 1) return "🟡 低风险";
+    return "🟢 正常";
+}
+
+function fmtDate(s) {
+    if (!s) return "";
+    const d = new Date(s);
+    return d.toLocaleString("zh-CN");
+}
+
+function truncate(s, len) {
+    if (!s) return "";
+    return s.length > len ? s.substring(0, len) + "..." : s;
+}
+
+async function loadQuotes() {
+    const data = await api("/admin/quotes", "GET");
+    document.getElementById("lastUpdate").textContent = "更新于 " + new Date().toLocaleTimeString();
+
+    if (!data.data || data.data.length === 0) {
+        document.getElementById("tableContainer").innerHTML = '<div class="empty">暂无报价数据，请先提交报价或点击「添加测试数据」</div>';
+        return;
+    }
+
+    const rows = data.data.map((q) => {
+        const tags = [];
+        if (q.flaggedBy && q.flaggedBy.length > 0) {
+            tags.push(...q.flaggedBy.map((f) => '<span class="tag tag-ip" title="' + f.label + '">' + f.label + '（与 ' + (f.bySupplier || f.byId) + '）</span>'));
+        }
+        if (q.fraudResults && q.fraudResults.length > 0) {
+            for (const r of q.fraudResults) {
+                if (r.type === "ua") tags.push('<span class="tag tag-ua">' + r.label + '</span>');
+            }
+        }
+        const highlight = q.riskLevel >= 2 ? ' class="row-highlight"' : "";
+        return '<tr' + highlight + '>' +
+            '<td><strong>#' + q.id + '</strong></td>' +
+            '<td>' + (q.projectName || q.projectId || "--") + '</td>' +
+            '<td>' + (q.supplierName || "--") + '</td>' +
+            '<td>¥' + (q.total || 0).toLocaleString() + '</td>' +
+            '<td class="ip-cell" title="' + q.ip + '">' + q.ip + '</td>' +
+            '<td title="' + (q.userAgent || "") + '">' + truncate(q.userAgent, 40) + '</td>' +
+            '<td><span class="risk-badge risk-' + q.riskLevel + '">' + riskLabel(q.riskLevel) + '</span></td>' +
+            '<td>' + tags.join("") + '</td>' +
+            '<td>' + fmtDate(q.submittedAt) + '</td>' +
+            '</tr>';
+    }).join("");
+
+    document.getElementById("tableContainer").innerHTML = `
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th><th>项目</th><th>供应商</th><th>总价</th><th>IP</th><th>User-Agent</th><th>风险</th><th>标记</th><th>时间</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>
+    `;
+
+    // 更新统计
+    const high = data.data.filter((q) => q.riskLevel === 3).length;
+    const mid = data.data.filter((q) => q.riskLevel === 2).length;
+    const low = data.data.filter((q) => q.riskLevel === 1).length;
+    document.getElementById("statHigh").textContent = high;
+    document.getElementById("statMid").textContent = mid;
+    document.getElementById("statLow").textContent = low;
+    document.getElementById("statTotal").textContent = data.total;
+}
+
+async function loadStats() {
+    const data = await api("/admin/stats", "GET");
+    document.getElementById("lastUpdate").textContent = "更新于 " + new Date().toLocaleTimeString();
+
+    let projectsHtml = "";
+    if (data.projects && data.projects.length > 0) {
+        projectsHtml = data.projects.map((p) => {
+            const warnItems = (p.warnings || []).map((w) =>
+                '<div style="padding:4px 0;font-size:12px;">' +
+                '<span class="tag tag-ip">' + w.label + '</span> ' +
+                w.supplierA + ' ↔ ' + w.supplierB +
+                ' <span style="color:#999;">(' + w.detail + ')</span>' +
+                '</div>'
+            ).join("");
+            return '<div style="padding:8px 0;border-bottom:1px solid #f0f0f0;">' +
+                '<strong>' + p.projectName + '</strong> (' + p.count + ' 个报价)' +
+                (warnItems ? warnItems : '<div style="color:#27ae60;font-size:12px;">✓ 未发现异常</div>') +
+                '</div>';
+        }).join("");
+    } else {
+        projectsHtml = '<div class="empty">暂无数据</div>';
+    }
+
+    document.getElementById("mainContent").innerHTML = `
+        <div class="stat-row">
+            <div class="stat-card"><div class="icon green">📋</div><div><div class="num" id="statTotal">${data.total}</div><div class="lbl">报价总数</div></div></div>
+            <div class="stat-card"><div class="icon red">🚨</div><div><div class="num" id="statHigh">${data.riskSummary?.high||0}</div><div class="lbl">高风险（同IP）</div></div></div>
+            <div class="stat-card"><div class="icon orange">⚠</div><div><div class="num" id="statMid">${data.riskSummary?.mid||0}</div><div class="lbl">中风险（同网段）</div></div></div>
+            <div class="stat-card"><div class="icon blue">⚡</div><div><div class="num" id="statLow">${data.riskSummary?.low||0}</div><div class="lbl">低风险（同区域）</div></div></div>
+        </div>
+        <div class="section">
+            <h2>📊 按项目分析</h2>
+            <p class="sub">每个项目中的报价 IP 对比情况</p>
+            ${projectsHtml}
+        </div>
+        <button class="btn btn-outline" onclick="window.location.reload()">← 返回列表</button>
+    `;
+}
+
+async function resetData() {
+    if (!confirm("确认重置所有报价数据？此操作不可撤销。")) return;
+    await api("/admin/reset", "POST");
+    toast("数据已重置", "success");
+    loadQuotes();
+}
+
+// ===== 测试数据 =====
+async function addTestData() {
+    const suppliers = [
+        { name: "供应商A", ip: "192.168.1.100" },
+        { name: "供应商B", ip: "192.168.1.100" },  // 同IP，高风险
+        { name: "供应商C", ip: "192.168.1.101" },  // 同网段，中风险
+        { name: "供应商D", ip: "192.168.2.50" },   // 正常
+        { name: "供应商E", ip: "10.0.0.1" },
+        { name: "供应商F", ip: "192.168.1.200" },  // 同网段
+    ];
+
+    for (const s of suppliers) {
+        await api("/quotes", "POST", {
+            projectId: "ZB-2026-001",
+            projectName: "2026年度办公设备采购项目",
+            buyer: "XX集团采购部",
+            budget: "500000",
+            supplierName: s.name,
+            items: [
+                { materialName: "服务器", spec: "Dell R750", quantity: 2, unitPrice: 80000 },
+                { materialName: "交换机", spec: "H3C S5130", quantity: 5, unitPrice: 5000 },
+            ],
+        }, { headers: { "X-Forwarded-For": s.ip, "User-Agent": "Mozilla/5.0 Test" } });
+    }
+
+    // 模拟从不同IP提交（手动设置header）
+    async function submitWithIP(name, ip) {
+        await fetch(API + "/quotes", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Forwarded-For": ip, "User-Agent": "Mozilla/5.0 Test" },
+            body: JSON.stringify({
+                projectId: "ZB-2026-001",
+                projectName: "2026年度办公设备采购项目",
+                buyer: "XX集团采购部",
+                budget: "500000",
+                supplierName: name,
+                items: [{ materialName: "服务器", spec: "Dell R750", quantity: 2, unitPrice: 80000 }],
+            }),
+        }).then((r) => r.json());
+    }
+
+    await submitWithIP("供应商A", "192.168.1.100");
+    await submitWithIP("供应商B", "192.168.1.100");
+    await submitWithIP("供应商C", "192.168.1.101");
+    await submitWithIP("供应商D", "192.168.2.50");
+    await submitWithIP("供应商E", "10.0.0.1");
+    await submitWithIP("供应商F", "192.168.1.200");
+
+    toast("6 条测试报价已添加", "success");
+    loadQuotes();
+}
+
+// ===== 初始化 =====
+loadQuotes();
+</script>
+</body>
+</html>

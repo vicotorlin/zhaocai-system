@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网易严选招采系统 - 登录 / 注册</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                         "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 40%, #2c5364 100%);
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            padding: 20px;
+        }
+
+        .login-wrapper { width: 100%; max-width: 460px; }
+
+        .system-title { text-align: center; color: #fff; margin-bottom: 32px; }
+        .system-title h1 { font-size: 28px; font-weight: 600; letter-spacing: 2px; margin-bottom: 8px; }
+        .system-title p { font-size: 14px; color: rgba(255,255,255,0.65); letter-spacing: 1px; }
+
+        .login-card {
+            background: #fff; border-radius: 12px; padding: 36px 36px 32px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        /* ===== Tab ===== */
+        .tab-bar { display: flex; border-bottom: 2px solid #eee; margin-bottom: 28px; }
+        .tab-bar button {
+            flex: 1; border: none; background: none; font-size: 16px; font-weight: 500;
+            color: #999; padding: 10px 0; cursor: pointer; position: relative; transition: color 0.25s;
+        }
+        .tab-bar button.active { color: #2c5364; font-weight: 600; }
+        .tab-bar button.active::after {
+            content:""; position:absolute; bottom:-2px; left:20%; right:20%;
+            height:2.5px; background:#2c5364; border-radius:2px;
+        }
+
+        .form-panel { display: none; }
+        .form-panel.active { display: block; }
+
+        /* ===== 表单 ===== */
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 14px; font-weight: 500; color: #333; margin-bottom: 6px; }
+        .form-group label .required { color: #e74c3c; margin-left: 2px; }
+
+        .input-wrapper { position: relative; }
+        .input-wrapper .icon {
+            position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+            width: 18px; height: 18px; pointer-events: none;
+        }
+        .input-wrapper .icon svg {
+            width: 100%; height: 100%; fill: none; stroke: #aaa;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+        }
+
+        .form-group select, .form-group input {
+            width: 100%; height: 46px; border: 1.5px solid #e0e0e0; border-radius: 8px;
+            font-size: 14px; color: #333; outline: none; transition: all 0.25s; background: #fafafa;
+        }
+        .form-group select {
+            padding:0 14px; cursor:pointer; appearance:none; -webkit-appearance:none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat:no-repeat; background-position:right 14px center; padding-right:36px;
+        }
+        .input-wrapper input { padding: 0 14px 0 42px; }
+
+        .form-group select:hover, .form-group input:hover { border-color: #bbb; }
+        .form-group select:focus, .form-group input:focus {
+            border-color: #2c5364; background: #fff; box-shadow: 0 0 0 3px rgba(44,83,100,0.08);
+        }
+        .form-group select.error, .form-group input.error { border-color: #e74c3c; background: #fff; }
+
+        .error-msg { font-size:12px; color:#e74c3c; margin-top:4px; display:none; line-height:1.4; }
+        .error-msg.show { display: block; }
+
+        /* ===== 邮箱/手机号切换 ===== */
+        .toggle-row {
+            display: flex; gap: 0; margin-bottom: 14px;
+            background: #f0f2f5; border-radius: 8px; padding: 3px;
+        }
+        .toggle-row button {
+            flex: 1; border: none; background: transparent; padding: 8px 0;
+            font-size: 13px; font-weight: 500; color: #888; cursor: pointer;
+            border-radius: 6px; transition: all 0.2s;
+        }
+        .toggle-row button.active {
+            background: #fff; color: #2c5364; font-weight: 600;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        .account-hint { font-size: 12px; color: #999; margin-top: 2px; }
+
+        /* ===== 验证码行 ===== */
+        .captcha-row { display: flex; gap: 10px; }
+        .captcha-row .input-wrapper { flex: 1; min-width: 0; }
+        .captcha-row .input-wrapper input { padding: 0 14px 0 42px; }
+
+        .btn-send-code {
+            flex-shrink: 0; width: 120px; height: 46px; border: 1.5px solid #2c5364;
+            border-radius: 8px; background: #fff; color: #2c5364; font-size: 13px;
+            font-weight: 500; cursor: pointer; transition: all 0.25s; white-space: nowrap;
+        }
+        .btn-send-code:hover:not(:disabled) { background: #2c5364; color: #fff; }
+        .btn-send-code:disabled { border-color:#ccc; color:#bbb; cursor:not-allowed; background:#f5f5f5; }
+
+        /* ===== Toast ===== */
+        .toast {
+            position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
+            padding: 12px 28px; border-radius: 8px; font-size: 14px; font-weight: 500;
+            z-index: 9999; animation: toastIn 0.3s ease; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+        .toast.success { background: #27ae60; color: #fff; }
+        .toast.error   { background: #e74c3c; color: #fff; }
+        .toast.info    { background: #2c5364; color: #fff; }
+        @keyframes toastIn {
+            from { opacity:0; transform:translateX(-50%) translateY(-12px); }
+            to   { opacity:1; transform:translateX(-50%) translateY(0); }
+        }
+
+        /* ===== 提交按钮 ===== */
+        .form-actions { margin-top: 26px; }
+        .btn-submit {
+            width: 100%; height: 48px; border: none; border-radius: 8px;
+            background: linear-gradient(135deg, #203a43, #2c5364); color: #fff;
+            font-size: 16px; font-weight: 600; letter-spacing: 1px; cursor: pointer;
+            transition: all 0.3s; position: relative; overflow: hidden;
+        }
+        .btn-submit:hover {
+            background: linear-gradient(135deg, #2c5364, #3a6b80);
+            box-shadow: 0 6px 20px rgba(44,83,100,0.35); transform: translateY(-1px);
+        }
+        .btn-submit:active { transform: translateY(0); }
+        .btn-submit.loading { pointer-events: none; color: transparent; }
+        .btn-submit.loading::after {
+            content:""; position:absolute; top:50%; left:50%;
+            width:22px; height:22px; margin:-11px 0 0 -11px;
+            border:2.5px solid rgba(255,255,255,0.3); border-top-color:#fff;
+            border-radius:50%; animation:spin 0.7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .form-footer { text-align: center; margin-top: 18px; font-size: 13px; color: #999; }
+        .form-footer a { color:#2c5364; text-decoration:none; cursor:pointer; transition:color 0.2s; }
+        .form-footer a:hover { color:#1a3a47; text-decoration:underline; }
+
+        .tip-banner { text-align:center; margin-top:18px; font-size:12px; color:rgba(255,255,255,0.45); }
+
+        @media (max-width: 480px) {
+            .login-card { padding: 24px 18px; }
+            .system-title h1 { font-size: 22px; }
+            .captcha-row { flex-direction: column; gap: 8px; }
+            .btn-send-code { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="login-wrapper">
+    <div class="system-title"><h1>网易严选招采管理系统</h1><p>Procurement & Bidding System</p></div>
+
+    <div class="login-card">
+        <div class="tab-bar">
+            <button class="tab-btn active" data-tab="login">用户登录</button>
+            <button class="tab-btn"          data-tab="register">注册账号</button>
+        </div>
+
+        <!-- ==================== 登录面板 ==================== -->
+        <div class="form-panel active" id="panel-login">
+            <form id="loginForm" novalidate>
+                <div class="form-group">
+                    <label>用户身份<span class="required">*</span></label>
+                    <select id="loginRole">
+                        <option value="">-- 请选择身份 --</option>
+                        <option value="supplier">供应商</option>
+                        <option value="buyer">采购方</option>
+                        <option value="reviewer">评审专家</option>
+                        <option value="admin">系统管理员</option>
+                    </select>
+                    <div class="error-msg" id="loginRoleError"></div>
+                </div>
+
+                <!-- 邮箱/手机号切换 -->
+                <div class="toggle-row">
+                    <button type="button" class="toggle-btn active" data-type="phone">📱 手机号</button>
+                    <button type="button" class="toggle-btn"         data-type="email">📧 邮箱</button>
+                </div>
+
+                <div class="form-group">
+                    <label for="loginAccount" id="loginAccountLabel">手机号<span class="required">*</span></label>
+                    <div class="input-wrapper">
+                        <span class="icon" id="loginIcon">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                            </svg>
+                        </span>
+                        <input type="text" id="loginAccount" placeholder="请输入11位手机号" autocomplete="username">
+                    </div>
+                    <p class="account-hint" id="loginAccountHint">输入已注册的手机号</p>
+                    <div class="error-msg" id="loginAccountError"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>登录密码<span class="required">*</span></label>
+                    <div class="input-wrapper">
+                        <span class="icon">
+                            <svg viewBox="0 0 24 24">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                            </svg>
+                        </span>
+                        <input type="password" id="loginPassword" placeholder="请输入登录密码" autocomplete="current-password">
+                    </div>
+                    <div class="error-msg" id="loginPasswordError"></div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-submit" id="btnLogin">登 录</button>
+                </div>
+            </form>
+            <div class="form-footer"><a href="#">忘记密码</a></div>
+        </div>
+
+        <!-- ==================== 注册面板 ==================== -->
+        <div class="form-panel" id="panel-register">
+            <form id="registerForm" novalidate>
+                <div class="form-group">
+                    <label>用户身份<span class="required">*</span></label>
+                    <select id="regRole">
+                        <option value="">-- 请选择身份 --</option>
+                        <option value="supplier">供应商</option>
+                        <option value="buyer">采购方</option>
+                        <option value="reviewer">评审专家</option>
+                    <option value="admin">管理员</option>
+</select>
+                    <div class="error-msg" id="regRoleError"></div>
+                  <div class="form-group">
+                      <label id="regNameLabel">供应商名称<span class="required">*</span></label>
+                      <input type="text" id="regName" placeholder="请输入供应商/公司名称" autocomplete="off">
+                      <div class="error-msg" id="regNameError"></div>
+                  </div>
+                </div>
+
+                <!-- 邮箱/手机号切换 -->
+                <div class="toggle-row">
+                    <button type="button" class="toggle-btn-reg active" data-regtype="phone">📱 手机号注册</button>
+                    <button type="button" class="toggle-btn-reg"         data-regtype="email">📧 邮箱注册</button>
+                </div>
+
+                <div class="form-group">
+                    <label for="regAccount" id="regAccountLabel">手机号<span class="required">*</span></label>
+                    <div class="input-wrapper">
+                        <span class="icon" id="regIcon">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                            </svg>
+                        </span>
+                        <input type="text" id="regAccount" placeholder="请输入11位手机号" autocomplete="off">
+                    </div>
+                    <p class="account-hint" id="regAccountHint">使用手机号注册，验证码将通过短信发送</p>
+                    <div class="error-msg" id="regAccountError"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="regCode">验证码<span class="required">*</span></label>
+                    <div class="captcha-row">
+                        <div class="input-wrapper">
+                            <span class="icon">
+                                <svg viewBox="0 0 24 24">
+                                    <polyline points="15 10 12 14 9 10"/>
+                                    <rect x="3" y="6" width="18" height="12" rx="2"/>
+                                </svg>
+                            </span>
+                            <input type="text" id="regCode" placeholder="请输入6位验证码" maxlength="6" autocomplete="off"><span id="devCodeHint" style="display:none;margin-left:8px;padding:2px 8px;background:#fef3c7;border-radius:4px;font-size:13px;font-weight:600;color:#92400e"></span>
+                        </div>
+                        <button type="button" class="btn-send-code" id="btnSendCode">发送验证码</button>
+                    </div>
+                    <div class="error-msg" id="regCodeError"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>设置密码<span class="required">*</span></label>
+                    <div class="input-wrapper">
+                        <span class="icon">
+                            <svg viewBox="0 0 24 24">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                            </svg>
+                        </span>
+                        <input type="password" id="regPassword" placeholder="请设置6-20位密码" autocomplete="new-password">
+                    </div>
+                    <div class="error-msg" id="regPasswordError"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>确认密码<span class="required">*</span></label>
+                    <div class="input-wrapper">
+                        <span class="icon">
+                            <svg viewBox="0 0 24 24">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                            </svg>
+                        </span>
+                        <input type="password" id="regPasswordConfirm" placeholder="请再次输入密码" autocomplete="new-password">
+                    </div>
+                    <div class="error-msg" id="regPasswordConfirmError"></div>
+                </div>
+
+                <div class="form-actions">
+                    <p style="margin-top:8px;font-size:12px;color:#e67e22;text-align:center">※ 采购方、评审专家、管理员注册后需等待审核通过方可登录；供应商注册后可直接登录</p>
+<button type="submit" class="btn-submit" id="btnRegister">注 册</button>
+                </div>
+            </form>
+            <div class="form-footer">
+                <span>已有账号？</span>
+                <a class="switch-tab" data-target="login">立即登录</a>
+            </div>
+        </div>
+
+        <div class="form-footer" id="loginFooter" style="display:block;">
+            <span>还没有账号？</span>
+            <a class="switch-tab" data-target="register">立即注册</a>
+        </div>
+    </div>
+
+    <div class="tip-banner">© 2024 网易严选招采管理系统 — 企业招采一体化平台</div>
+</div>
+
+<script>
+(function(){
+    var API  = "http://localhost:3000";
+    var roleMap = { supplier:"供应商", buyer:"采购方", reviewer:"评审专家", admin:"管理员" };
+
+    function $(id){ return document.getElementById(id); }
+
+    function toast(msg, type){
+        type = type || "info";
+        var el = document.createElement("div");
+        el.className = "toast " + type; el.textContent = msg;
+        document.body.appendChild(el);
+        setTimeout(function(){ el.style.opacity="0"; el.style.transition="opacity 0.3s";
+            setTimeout(function(){ el.remove(); },300); },2500);
+    }
+
+    function showErr(id, msg){
+        var el = $(id);
+        if(msg){ el.textContent=msg; el.classList.add("show"); }
+        else   { el.classList.remove("show"); }
+    }
+
+    function markInp(id, err){
+        var el = $(id); if(el){ if(err) el.classList.add("error"); else el.classList.remove("error"); }
+    }
+
+    function clearErrs(ids){
+        ids.forEach(function(id){ showErr(id,null); markInp(id.replace(/Error$/,""),false); });
+    }
+
+    function isPhone(s){ return /^1[3-9]\d{9}$/.test(s); }
+    function isEmail(s){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
+
+    async function api(path, body){
+        var r = await fetch(API+path,{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body) });
+        return await r.json();
+    }
+
+    // ===== Tab 切换 =====
+    function switchTab(t){
+        document.querySelectorAll(".tab-btn").forEach(function(b){ b.classList.remove("active"); });
+        document.querySelectorAll(".form-panel").forEach(function(p){ p.classList.remove("active"); });
+        if(t==="login"){ document.querySelector('.tab-btn[data-tab="login"]').classList.add("active");
+            $("panel-login").classList.add("active"); $("loginFooter").style.display="block"; }
+        else { document.querySelector('.tab-btn[data-tab="register"]').classList.add("active");
+            $("panel-register").classList.add("active"); $("loginFooter").style.display="none"; }
+    }
+    document.querySelectorAll(".tab-btn").forEach(function(b){ b.addEventListener("click",function(){ switchTab(this.getAttribute("data-tab")); }); });
+    document.querySelectorAll(".switch-tab").forEach(function(a){ a.addEventListener("click",function(e){ e.preventDefault(); switchTab(this.getAttribute("data-target")); }); });
+
+    // ===== 账号类型切换（登录页） =====
+    var loginType = "phone"; // phone | email
+    var loginToggleBtns = document.querySelectorAll("#panel-login .toggle-btn");
+    loginToggleBtns.forEach(function(b){
+        b.addEventListener("click", function(){
+            loginToggleBtns.forEach(function(x){ x.classList.remove("active"); });
+            this.classList.add("active");
+            loginType = this.getAttribute("data-type");
+            updateLoginUI();
+        });
+    });
+
+    function updateLoginUI(){
+        var isPhone = loginType === "phone";
+        $("loginAccountLabel").innerHTML = (isPhone ? "手机号" : "邮箱") + '<span class="required">*</span>';
+        $("loginAccount").placeholder = isPhone ? "请输入11位手机号" : "请输入邮箱地址";
+        $("loginAccount").value = "";
+        $("loginAccountHint").textContent = isPhone ? "输入已注册的手机号" : "输入已注册的邮箱";
+        $("loginIcon").innerHTML = isPhone
+            ? '<svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>'
+            : '<svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>';
+        clearErrs(["loginAccountError","loginPasswordError"]);
+    }
+
+    // ===== 登录 =====
+    var loginForm = $("loginForm"), btnLogin = $("btnLogin");
+    loginForm.addEventListener("submit", async function(e){
+        e.preventDefault();
+        clearErrs(["loginAccountError","loginPasswordError"]);
+        var role = $("loginRole").value, account = $("loginAccount").value.trim(), password = $("loginPassword").value, valid = true;
+
+        if(!role){ showErr("loginRoleError","请选择用户身份"); markInp("loginRole",true); valid=false; }
+
+        if(!account){ showErr("loginAccountError","请输入"+(loginType==="phone"?"手机号":"邮箱")); markInp("loginAccount",true); valid=false; }
+        else if(loginType==="phone" && !isPhone(account)){ showErr("loginAccountError","请输入有效的11位手机号"); markInp("loginAccount",true); valid=false; }
+        else if(loginType==="email" && !isEmail(account)){ showErr("loginAccountError","请输入有效的邮箱地址"); markInp("loginAccount",true); valid=false; }
+
+        if(!password){ showErr("loginPasswordError","请输入登录密码"); markInp("loginPassword",true); valid=false; }
+        if(!valid) return;
+
+        btnLogin.classList.add("loading");
+        try {
+            var r = await api("/api/login",{ account:account, password:password, role:role });
+            if(r.success){ toast("登录成功，正在跳转...","success"); setTimeout(function(){ sessionStorage.setItem("zrbac_user", account); sessionStorage.setItem("zrbac_role", role); var userName = (r.data && r.data.name) || r.name || ""; sessionStorage.setItem("zrbac_name", userName); window.location.href = "dashboard.html?account=" + encodeURIComponent(account) + "&role=" + encodeURIComponent(role) + "&name=" + encodeURIComponent(userName); },800); }
+            else { toast(r.message,"error"); }
+        } catch(ex){ toast("网络错误，请确认服务已启动","error"); }
+        btnLogin.classList.remove("loading");
+    });
+    $("loginAccount").addEventListener("input",function(){ showErr("loginAccountError",null); markInp("loginAccount",false); });
+    $("loginPassword").addEventListener("input",function(){ showErr("loginPasswordError",null); markInp("loginPassword",false); });
+    $("loginRole").addEventListener("change",function(){ showErr("loginRoleError",null); markInp("loginRole",false); });
+
+    // ===== 账号类型切换（注册页） =====
+    var regType = "phone";
+    function updateRegNameLabel() {
+      var role = $("regRole").value;
+      var lbl = $("regNameLabel");
+      var inp = $("regName");
+      if (role === "supplier") {
+        lbl.innerHTML = '供应商名称<span class="required">*</span>';
+        inp.placeholder = "请输入供应商/公司名称";
+      } else {
+        lbl.innerHTML = '姓名<span class="required">*</span>';
+        inp.placeholder = "请输入姓名";
+      }
+    }
+    $("regRole").addEventListener("change", updateRegNameLabel);
+
+    var regToggleBtns = document.querySelectorAll(".toggle-btn-reg");
+    regToggleBtns.forEach(function(b){
+        b.addEventListener("click", function(){
+            regToggleBtns.forEach(function(x){ x.classList.remove("active"); });
+            this.classList.add("active");
+            regType = this.getAttribute("data-regtype");
+            updateRegUI();
+        });
+    });
+
+    function updateRegUI(){
+        var isPhone = regType === "phone";
+        $("regAccountLabel").innerHTML = (isPhone ? "手机号" : "邮箱") + '<span class="required">*</span>';
+        $("regAccount").placeholder = isPhone ? "请输入11位手机号" : "请输入邮箱地址";
+        $("regAccount").value = "";
+        $("regAccountHint").textContent = isPhone ? "使用手机号注册，验证码将通过短信发送" : "使用邮箱注册，验证码将发送到该邮箱";
+        $("regIcon").innerHTML = isPhone
+            ? '<svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>'
+            : '<svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>';
+        clearErrs(["regAccountError","regCodeError"]);
+        $("regCode").value = "";
+    }
+
+    // ===== 注册 =====
+    var btnRegister = $("btnRegister"), btnSendCode = $("btnSendCode");
+    var regErrIds = ["regRoleError","regNameError","regAccountError","regCodeError","regPasswordError","regPasswordConfirmError"];
+
+    function validateReg(data){
+        var ok = true;
+        if(!data.role){ showErr("regRoleError","请选择用户身份"); markInp("regRole",true); ok=false; }
+        if(!data.account){ showErr("regAccountError","请输入"+(regType==="phone"?"手机号":"邮箱")); markInp("regAccount",true); ok=false; }
+        else if(regType==="phone" && !isPhone(data.account)){ showErr("regAccountError","请输入有效的11位手机号"); markInp("regAccount",true); ok=false; }
+        else if(regType==="email" && !isEmail(data.account)){ showErr("regAccountError","请输入有效的邮箱地址"); markInp("regAccount",true); ok=false; }
+        if(!data.code){ showErr("regCodeError","请输入验证码"); markInp("regCode",true); ok=false; }
+        else if(!/^\d{6}$/.test(data.code)){ showErr("regCodeError","验证码为6位数字"); markInp("regCode",true); ok=false; }
+        if(!data.password){ showErr("regPasswordError","请设置密码"); markInp("regPassword",true); ok=false; }
+        else if(data.password.length<6||data.password.length>20){ showErr("regPasswordError","密码长度应为6-20位"); markInp("regPassword",true); ok=false; }
+        if(!data.passwordConfirm){ showErr("regPasswordConfirmError","请确认密码"); markInp("regPasswordConfirm",true); ok=false; }
+        else if(data.password!==data.passwordConfirm){ showErr("regPasswordConfirmError","两次输入的密码不一致"); markInp("regPasswordConfirm",true); ok=false; }
+        return ok;
+    }
+
+    $("registerForm").addEventListener("submit", async function(e){
+        e.preventDefault(); clearErrs(regErrIds);
+        var data = { role:$("regRole").value, account:$("regAccount").value.trim(), code:$("regCode").value.trim(),
+                     password:$("regPassword").value, passwordConfirm:$("regPasswordConfirm").value };
+        if(!validateReg(data)) return;
+        btnRegister.classList.add("loading");
+        try {
+            var vr = await api("/api/verify-code",{ account:data.account, code:data.code });
+            if(!vr.success){ toast(vr.message,"error"); btnRegister.classList.remove("loading"); return; }
+            var rr = await api("/api/register",{ role:data.role, name:data.name, account:data.account, password:data.password, code:data.code, token:vr.token });
+            if(rr.success){ toast(rr.message||"注册成功！","success"); $("registerForm").reset(); clearErrs(regErrIds); setTimeout(function(){ switchTab("login"); },1500); }
+            else { toast(rr.message,"error"); }
+        } catch(ex){ toast("网络错误，请确认服务已启动","error"); }
+        btnRegister.classList.remove("loading");
+    });
+
+    // ===== 发送验证码 =====
+    var cd=0, cdTimer=null;
+    btnSendCode.addEventListener("click", async function(){
+        var account = $("regAccount").value.trim();
+        showErr("regAccountError",null); markInp("regAccount",false);
+        if(!account){ showErr("regAccountError","请先输入"+(regType==="phone"?"手机号":"邮箱")); markInp("regAccount",true); $("regAccount").focus(); return; }
+        if(regType==="phone" && !isPhone(account)){ showErr("regAccountError","请输入有效的11位手机号"); markInp("regAccount",true); $("regAccount").focus(); return; }
+        if(regType==="email" && !isEmail(account)){ showErr("regAccountError","请输入有效的邮箱地址"); markInp("regAccount",true); $("regAccount").focus(); return; }
+
+        btnSendCode.disabled=true; btnSendCode.textContent="发送中...";
+        try {
+            var r = await api("/api/send-code",{ account:account });
+            if(r.success){
+                if(r.dev && r.code){
+                    document.getElementById("regCode").value = r.code;
+                    var hint = document.getElementById("devCodeHint");
+                    if(hint) { hint.style.display = "inline-block"; hint.textContent = "开发模式 验证码: " + r.code; }
+                    toast("验证码已自动填充：" + r.code,"success");
+                } else {
+                    toast("验证码已发送","success");
+                }
+                cd=60; updateCd();
+                cdTimer=setInterval(function(){ cd--; if(cd<=0){ clearInterval(cdTimer); cdTimer=null; btnSendCode.disabled=false; btnSendCode.textContent="重新发送"; }else{ updateCd(); } },1000);
+            } else { toast(r.message,"error"); btnSendCode.disabled=false; btnSendCode.textContent="发送验证码"; }
+        } catch(ex){ toast("网络错误，请确认服务已启动","error"); btnSendCode.disabled=false; btnSendCode.textContent="发送验证码"; }
+    });
+    function updateCd(){ btnSendCode.textContent = cd+"s 后重发"; }
+
+    // ===== 实时清除错误 =====
+    ["regRole","regName","regAccount","regCode","regPassword","regPasswordConfirm"].forEach(function(id){
+        var el=$(id); if(!el) return;
+        el.addEventListener(el.tagName==="SELECT"?"change":"input", function(){ showErr(id+"Error",null); markInp(id,false); });
+    });
+})();
+</script>
+</body>
+</html>

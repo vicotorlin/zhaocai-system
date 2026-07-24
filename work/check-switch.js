@@ -1,0 +1,1 @@
+﻿var fs=require("fs");var js=JSON.parse(fs.readFileSync("work/js_all.json","utf8"));var start=false;js.forEach(function(l,i){if(l.includes("function switchView"))start=true;if(start){console.log(i+":",l.substring(0,120));if(l==="}")start=false;}});

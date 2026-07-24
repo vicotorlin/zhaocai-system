@@ -1,0 +1,15 @@
+◇ injected env (10) from ..\Codex\2026-07-07\new-chat-2\server\.env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+[Supabase] 已连接 PostgreSQL 数据库
+[SMS] 未配置 (请设置 SMS_ACCESS_KEY_ID / SMS_ACCESS_KEY_SECRET / SMS_TEMPLATE_CODE)
+[Upload] Supabase Storage 已配置
+
+============================================
+    招采管理系统 API 服务器
+    地址: http://localhost:3000
+    环境: development
+    邮件: 已配置
+    短信: 未配置
+    数据库: Supabase/PostgreSQL
+    [开发模式] - 验证码将直接返回
+============================================
+[Seed] 已创建默认用户: 794474441@qq.com (buyer)

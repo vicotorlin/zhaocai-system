@@ -1,0 +1,1 @@
+﻿var fs=require('fs');var h=fs.readFileSync('outputs/dashboard.html','utf8');var bs=h.substring(0,h.indexOf('<script>'));console.log('view-buyer:',bs.includes('id=\x22view-buyer-projects\x22'));console.log('sidebar:',bs.includes('id=\x22sidebar\x22'));console.log('view count:',(bs.match(/class=\x22view\x22/g)||[]).length);

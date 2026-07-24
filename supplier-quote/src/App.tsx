@@ -1,0 +1,737 @@
+import { useState, useRef, useEffect } from "react"
+import { z } from "zod"
+import { Plus, Trash2, Calculator } from "lucide-react"
+import { Button } from "./components/ui/button"
+import { Input } from "./components/ui/input"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "./components/ui/table"
+
+// ==================== Zod Schema ====================
+const quoteItemSchema = z.object({
+  partName: z.string().optional(),
+  materialName: z.string().min(1, "物料名称"),
+  materialCode: z.string().optional(),
+  weight: z.coerce.number().optional(),
+  spec: z.string().optional(),
+  netUsage: z.coerce.number().optional(),
+  wastage: z.coerce.number().optional(),
+  quantity: z.coerce.number().optional(),
+  unitPrice: z.coerce.number().min(0.01, "单价 > 0"),
+})
+
+type QuoteItem = { partName?: string; materialName: string; materialCode?: string; weight?: number; spec?: string; netUsage?: number; wastage?: number; quantity?: number; unitPrice: number }
+
+const API_BASE = "http://localhost:3000"
+
+// ==================== 品类模板 ====================
+const categoryTemplates: Record<string, { materialName: string; spec: string }[]> = {
+  "被子件套": [
+    { partName: "被套", materialName: "纯棉面料", materialCode: "", weight: 200, spec: "280", netUsage: 2.5, wastage: 5, quantity: 1, unitPrice: 0 },
+    { partName: "床单", materialName: "纯棉面料", materialCode: "", weight: 180, spec: "250", netUsage: 2.0, wastage: 4, quantity: 1, unitPrice: 0 },
+    { partName: "枕套", materialName: "纯棉面料", materialCode: "", weight: 150, spec: "75", netUsage: 0.8, wastage: 3, quantity: 1, unitPrice: 0 },
+    { partName: "被芯", materialName: "羽绒填充", materialCode: "", weight: 500, spec: "200", netUsage: 1.0, wastage: 3, quantity: 1, unitPrice: 0 },
+  ],
+  "枕头抱枕": [
+    { materialName: "枕头", spec: "记忆棉/乳胶" },
+    { materialName: "抱枕", spec: "PP棉/泰迪熊" },
+    { materialName: "靠枕", spec: "记忆棉/海绵" },
+  ],
+  "服装": [
+    { materialName: "上衣", spec: "纯棉/混纺" },
+    { materialName: "裤子", spec: "纯棉/混纺" },
+    { materialName: "外套", spec: "防水/风衣" },
+    { materialName: "内衣", spec: "纯棉" },
+  ],
+  "箱包": [
+    { materialName: "拉杆箱", spec: "ABS/PC/铝合金" },
+    { materialName: "背包", spec: "帼纺/皮革" },
+    { materialName: "手提包", spec: "皮革/帆布" },
+  ],
+  "办公椅": [
+    { materialName: "人体工学椅", spec: "网布/皮革" },
+    { materialName: "会议椅", spec: "网布/皮革/塑料" },
+    { materialName: "职员椅", spec: "网布/海绵" },
+    { materialName: "沙发", spec: "布艺/皮革" },
+  ],
+  "玩具": [
+    { materialName: "毛绒玩具", spec: "毛绒/混纺" },
+    { materialName: "塑料玩具", spec: "ABS/PP" },
+    { materialName: "益智玩具", spec: "木制/塑料" },
+    { materialName: "模型", spec: "PVC/合金" },
+  ],
+  "纸品": [
+    { materialName: "纸巾", spec: "木浆/竹纤" },
+    { materialName: "抽纸", spec: "木浆/竹纤" },
+    { materialName: "湿巾", spec: "无纺布" },
+    { materialName: "纸杯", spec: "单层/双层" },
+  ],
+  "餐具水具锅具": [
+    { materialName: "碗碟", spec: "陶瓷/不锈钢/塑料" },
+    { materialName: "保温杯", spec: "不锈钢/玻璃" },
+    { materialName: "炒锅", spec: "不锈钢/镋不粘涂层" },
+    { materialName: "刀具套装", spec: "不锈钢/陶瓷" },
+  ],
+  "电子产品": [
+    { materialName: "充电器", spec: "USB-C/快充" },
+    { materialName: "数据线", spec: "USB-C/Lightning" },
+    { materialName: "蓝牙耳机", spec: "TWS/降噪" },
+    { materialName: "移动电源", spec: "10000mAh/20000mAh" },
+  ],
+  "其他": [
+    { materialName: "商品名称", spec: "规格型号" },
+  ],
+};
+
+const categoryOptions = [
+  "被子件套",
+  "枕头抱枕",
+  "服装",
+  "箱包",
+  "办公椅",
+  "玩具（毛绒、塑料等）",
+  "纸品",
+  "餐具水具锅具",
+  "电子产品",
+  "其他",
+];
+
+// ==================== QuoteForm ====================
+function QuoteForm({
+  projectId, projectName, supplierAccount, supplierName, buyer, budget,
+  bidId, initialItems, initialSpecs, initialCategory,
+}: {
+  projectId: string; projectName: string; supplierAccount: string; supplierName: string;
+  buyer: string; budget: string; bidId: string;
+  initialItems: QuoteItem[];
+  initialSpecs?: Array<{ id: number; name: string; laborCost: number; manufacturingCost: number; adminCost: number; profit: number; tax: number; items: QuoteItem[] }>;
+  initialCategory?: string;
+}) {
+  const [submitting, setSubmitting] = useState(false)
+  const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [bidResult, setBidResult] = useState<{ id: string; total: number } | null>(null)
+  const [category, setCategory] = useState(initialCategory || "")
+
+  const [specs, setSpecs] = useState<Array<{
+    id: number; name: string;
+    laborCost: number; manufacturingCost: number; adminCost: number; profit: number; tax: number;
+    items: QuoteItem[];
+  }>>(() => {
+    if (initialSpecs && initialSpecs.length > 0) return initialSpecs
+    const defaultItem = { partName: "", materialName: "", materialCode: "", weight: 0, spec: "", netUsage: 0, wastage: 0, quantity: 0, unitPrice: 0 }
+    const initItems = initialItems && initialItems.length > 0 ? initialItems : [defaultItem]
+    return [{ id: 0, name: "", laborCost: 0, manufacturingCost: 0, adminCost: 0, profit: 0, tax: 0, items: initItems }]
+  })
+  const specIdCounter = useRef(1)
+
+
+
+
+  const updateSpec = (specId: number, updates: Partial<typeof specs[0]>) => {
+    setSpecs(prev => prev.map(s => s.id === specId ? { ...s, ...updates } : s))
+  }
+
+  const applyTemplate = (cat: string, specId: number) => {
+    const tmpl = categoryTemplates[cat];
+    if (!tmpl) return;
+    const items = tmpl.map(t => ({ partName: t.partName || "", materialName: t.materialName, materialCode: t.materialCode || "", weight: t.weight || 0, spec: t.spec || "", netUsage: t.netUsage || 0, wastage: t.wastage || 0, quantity: 1, unitPrice: t.unitPrice || 0 }));
+    updateSpec(specId, { items });
+    setCategory(cat);
+  };
+
+  const addSpec = () => {
+    const newId = specIdCounter.current++
+    setSpecs(prev => [...prev, {
+      id: newId, name: "",
+      laborCost: 0, manufacturingCost: 0, adminCost: 0, profit: 0, tax: 0,
+      items: [{ partName: "", materialName: "", materialCode: "", weight: 0, spec: "", netUsage: 0, wastage: 0, quantity: 0, unitPrice: 0 }]
+    }])
+  }
+
+  const removeSpec = (specId: number) => {
+    if (specs.length <= 1) return
+    setSpecs(prev => prev.filter(s => s.id !== specId))
+  }
+
+  const calcActualUsage = (items: QuoteItem[], idx: number) => {
+    const item = items[idx]
+    if (!item) return 0
+    const net = Number(item.netUsage) || 0
+    const waste = Number(item.wastage) || 0
+    return net * (1 + waste / 100)
+  }
+
+  const calcTaxIncluded = (items: QuoteItem[], idx: number) => {
+    const item = items[idx]
+    if (!item) return 0
+    const weight = Number(item.weight) || 0
+    const specNum = parseFloat(item.spec || "0") || 0
+    const usage = calcActualUsage(items, idx)
+    const price = Number(item.unitPrice) || 0
+    if (weight === 0 && specNum === 0) {
+      return usage * price
+    }
+    return weight * specNum * usage * price / 100000
+  }
+
+  const calcSubtotal = (items: QuoteItem[], idx: number) => {
+    const item = items[idx]
+    if (!item) return 0
+    if (category === "被子件套") {
+      return calcTaxIncluded(items, idx)
+    }
+    return (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)
+  }
+
+  const calcSpecTotal = (items: QuoteItem[]) => {
+    if (category === "被子件套") {
+      const raw = items.reduce((sum, _, idx) => sum + calcSubtotal(items, idx), 0)
+      return Math.round(raw * 100) / 100
+    }
+    const raw = items.reduce((sum, item) => sum + (Number(item?.quantity) || 0) * (Number(item?.unitPrice) || 0), 0)
+    return Math.round(raw * 100) / 100
+  }
+
+  const calcGrandTotal = () => {
+    const raw = specs.reduce((sum, spec) => {
+      const matSum = calcSpecTotal(spec.items)
+      return sum + matSum + spec.laborCost + spec.manufacturingCost + spec.adminCost + spec.profit + spec.tax
+    }, 0)
+    return Math.round(raw * 100) / 100
+  }
+
+  const grandTotal = calcGrandTotal();
+
+  const handleSubmitForm = async () => {
+    if (!projectId) { setSubmitResult({ success: false, message: "Missing project ID" }); return }
+    if (!supplierAccount) { setSubmitResult({ success: false, message: "Missing account" }); return }
+    setSubmitting(true)
+    setSubmitResult(null)
+    try {
+      const allItems: any[] = []
+      const specsWithSubtotal = specs.map(spec => ({
+        ...spec,
+        items: spec.items.map((it, i) => ({ ...it, subtotal: calcSubtotal(spec.items, i) }))
+      }))
+      specsWithSubtotal.forEach(spec => {
+        spec.items.forEach((it: any) => {
+          allItems.push({ ...it, specName: spec.name })
+        })
+      })
+      const total = calcGrandTotal()
+      const totalLabor = specs.reduce((s, sp) => s + sp.laborCost, 0)
+      const totalMfg = specs.reduce((s, sp) => s + sp.manufacturingCost, 0)
+      const totalAdmin = specs.reduce((s, sp) => s + sp.adminCost, 0)
+      const totalProfit = specs.reduce((s, sp) => s + sp.profit, 0)
+      const totalTax = specs.reduce((s, sp) => s + sp.tax, 0)
+      const method = bidId ? "PUT" : "POST"
+      const url = bidId ? API_BASE + "/api/supplier/bid/" + bidId : API_BASE + "/api/supplier/bid"
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ account: supplierAccount, projectId, supplierAccount, supplierName: supplierName || supplierAccount, items: allItems, total, laborCost: totalLabor, manufacturingCost: totalMfg, adminCost: totalAdmin, profit: totalProfit, tax: totalTax, specs: specsWithSubtotal, category }),
+      })
+      const json = await res.json()
+      if (json.success) {
+        setBidResult({ id: json.data.id, total })
+      } else {
+        setSubmitResult({ success: false, message: json.message || "Submit failed" })
+      }
+    } catch (e: any) {
+      setSubmitResult({ success: false, message: "Network error: " + (e.message || "unknown") })
+    } finally { setSubmitting(false) }
+  }
+
+  const handleExportCSV = () => {
+    const rows: string[] = []
+    const hasBedding = category === "被子件套"
+    if (hasBedding) {
+      rows.push("部件名称,物料名称,牌号,克重(g),规格/幅宽(CM),净用量,损耗(%),实际用量,单价,含税金额,小计,产品规格")
+      specs.forEach(spec => {
+        spec.items.forEach((it, i) => {
+          const au = calcActualUsage(spec.items, i)
+          const ti = calcTaxIncluded(spec.items, i)
+          const st = calcSubtotal(spec.items, i)
+          rows.push([it.partName||'', it.materialName||'', it.materialCode||'', it.weight||0, it.spec||'', it.netUsage||0, it.wastage||0, au.toFixed(2), (it.unitPrice||0).toFixed(2), ti.toFixed(2), st.toFixed(2), spec.name||('规格'+(spec.id||specs.indexOf(spec)+1))].join(','))
+        })
+      })
+    } else {
+      rows.push("物料名称,规格,数量,单价,小计,产品规格")
+      specs.forEach(spec => {
+        spec.items.forEach((it, i) => {
+          const st = calcSubtotal(spec.items, i)
+          rows.push([it.materialName||'', it.spec||'', it.quantity||0, (it.unitPrice||0).toFixed(2), st.toFixed(2), spec.name||('规格'+(spec.id||specs.indexOf(spec)+1))].join(','))
+        })
+      })
+    }
+    const bom = "﻿"
+    const blob = new Blob([bom + rows.join('\n')], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = '报价明细_' + new Date().toISOString().slice(0,10) + '.csv'
+    a.click(); URL.revokeObjectURL(url)
+  }
+
+    if (bidResult) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100 flex items-center justify-center py-6 px-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
+          <div className="text-6xl mb-4">✅</div>
+          <h1 className="text-2xl font-bold text-emerald-700 mb-2">报价提交成功！</h1>
+          <p className="text-slate-500 mb-6">您的报价已成功提交，采购方将进行审核</p>
+          <div className="bg-slate-50 rounded-xl p-5 mb-6 text-left space-y-3">
+            <div className="flex justify-between"><span className="text-slate-500">报价单号</span><span className="font-mono font-bold text-slate-800">{bidResult.id}</span></div>
+            <div className="flex justify-between"><span className="text-slate-500">报价项目</span><span className="font-medium text-slate-700">{projectName}</span></div>
+            <div className="flex justify-between"><span className="text-slate-500">供应商</span><span className="font-medium text-slate-700">{supplierName || supplierAccount}</span></div>
+            <div className="border-t pt-3 flex justify-between"><span className="text-slate-700 font-semibold">总报价金额</span><span className="text-xl font-bold text-red-600">¥{bidResult.total.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+          </div>
+          <button onClick={() => { setBidResult(null); setSubmitResult(null); }} className="w-full py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-700 font-medium">继续报价</button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-6 px-4">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-slate-800">{bidId ? '✏️ 修改报价' : '📝 供应商报价填写'}</h1>
+          <p className="text-sm text-slate-500 mt-1">逐行填写物料信息，系统自动计算小计与总报价</p>
+        </div>
+
+        <div>
+          <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
+            {projectId && (
+              <div className="mb-4 p-3 bg-blue-50 rounded-lg text-sm text-slate-700 flex flex-wrap gap-x-6 gap-y-1">
+                <span><strong>项目：</strong>{projectName}（{projectId}）</span>
+                <span><strong>采购单位：</strong>{buyer}</span>
+                <span><strong>供应商：</strong>{supplierName || supplierAccount}</span>
+                <span><strong>预算：</strong>{Number(budget || 0).toLocaleString()}</span>
+              </div>
+            )}
+            {submitResult && (
+              <div className={'mb-4 p-3 rounded-lg text-sm font-medium ' + (submitResult.success ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600')}>
+                {submitResult.message}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+              <div><label className="text-sm font-medium text-slate-600">供应商名称</label><Input placeholder="请输入供应商名称" defaultValue={supplierName || supplierAccount} className="mt-1.5" /></div>
+              <div><label className="text-sm font-medium text-slate-600">报价类目</label>
+              <select
+                className="w-full h-10 border rounded-md px-3 text-sm bg-white mt-1.5 focus:border-slate-400 outline-none"
+                value={category}
+                onChange={(e) => { setCategory(e.target.value); if (e.target.value) applyTemplate(e.target.value, specs[0].id) }}
+              >
+                <option value="">请选择报价类目</option>
+                {categoryOptions.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+              {category && <p className="text-xs text-slate-400 mt-1">已加载模板，可修改各行数据</p>}
+            </div>
+              <div><label className="text-sm font-medium text-slate-600">报价有效期</label><Input placeholder="请输入报价有效期，如：30天" className="mt-1.5" /></div>
+            </div>
+
+            {/* ===== 产品规格区块 ===== */}
+            {specs.map((spec, specIdx) => {
+              const specItems = spec.items
+              const matSum = calcSpecTotal(specItems)
+              const specTotal = matSum + spec.laborCost + spec.manufacturingCost + spec.adminCost + spec.profit + spec.tax
+
+              return (
+                <div key={spec.id} className="border-2 border-slate-200 rounded-xl p-4 mb-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-semibold text-slate-500 px-2">{spec.name || '产品或规格 ' + (specIdx + 1)}</span>
+                    </div>
+                    {specs.length > 1 && (
+                      <Button type="button" variant="ghost" size="sm" onClick={() => removeSpec(spec.id)} className="text-red-400 hover:text-red-600 text-xs">删除此规格</Button>
+                    )}
+                  </div>
+
+                  {/* 费用拆分 */}
+                  <div className="bg-slate-50 rounded-lg border p-3 mb-3">
+                    <h4 className="text-xs font-semibold text-slate-700 mb-2">费用拆分</h4>
+                    
+                    <div className="mb-2">
+                      <label className="text-xs text-slate-500">规格</label>
+                      <Input
+                        placeholder="请输入产品规格名称（如：1.5米床/1.8米床）"
+                        value={spec.name}
+                        onChange={(e) => updateSpec(spec.id, { name: e.target.value })}
+                        className="mt-0.5 h-8 text-xs"
+                      />
+                    </div><div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      <div>
+                        <label className="text-xs text-slate-500">材料费用（含主材辅材，包装等实物费用）</label>
+                        <div className="mt-0.5 h-8 flex items-center px-2 bg-white border rounded text-xs font-semibold text-slate-700">{matSum.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-500">人工费用</label>
+                        <Input type="number" min="0" value={spec.laborCost} onChange={(e) => updateSpec(spec.id, { laborCost: Number(e.target.value) || 0 })} placeholder="0" className="mt-0.5 h-8 text-xs" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-500">制造费用</label>
+                        <span className="text-[10px] text-slate-400">含房租，水电，机器折旧</span>
+                        <Input type="number" min="0" value={spec.manufacturingCost} onChange={(e) => updateSpec(spec.id, { manufacturingCost: Number(e.target.value) || 0 })} placeholder="0" className="mt-0.5 h-8 text-xs" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-500">管理费用</label>
+                        <Input type="number" min="0" value={spec.adminCost} onChange={(e) => updateSpec(spec.id, { adminCost: Number(e.target.value) || 0 })} placeholder="0" className="mt-0.5 h-8 text-xs" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-500">利润</label>
+                        <Input type="number" min="0" value={spec.profit} onChange={(e) => updateSpec(spec.id, { profit: Number(e.target.value) || 0 })} placeholder="0" className="mt-0.5 h-8 text-xs" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-500">税金</label>
+                        <Input type="number" min="0" value={spec.tax} onChange={(e) => updateSpec(spec.id, { tax: Number(e.target.value) || 0 })} placeholder="0" className="mt-0.5 h-8 text-xs" />
+                      </div>
+                    </div>
+                    <div className="mt-2 pt-2 border-t flex justify-between items-center">
+                      <span className="text-xs text-slate-500">本规格费用合计</span>
+                      <span className="text-sm font-bold text-slate-800">{"¥"} {specTotal.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+
+                  {/* 物料报价明细 */}
+                  <div className="rounded-lg border overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-slate-50">
+                          <TableHead className="w-8 text-center">#</TableHead>
+                          {category === "被子件套" ? (
+                            <>
+                          <TableHead className="whitespace-nowrap px-1.5 text-xs">部件名称</TableHead>
+                          <TableHead className="whitespace-nowrap px-1.5 text-xs">物料名称</TableHead>
+                          <TableHead className="whitespace-nowrap px-1.5 text-xs">物料牌号</TableHead>
+                          <TableHead className="whitespace-nowrap px-1.5 text-xs">克重(g)</TableHead>
+                          <TableHead className="whitespace-nowrap px-1.5 text-xs">规格/幅宽(CM)</TableHead>
+                          <TableHead className="whitespace-nowrap px-1.5 text-xs">净用量</TableHead>
+                          <TableHead className="whitespace-nowrap px-1.5 text-xs">损耗(%)</TableHead>
+                          <TableHead className="whitespace-nowrap px-1.5 text-xs">实际用量</TableHead>
+                          <TableHead className="whitespace-nowrap px-1.5 text-xs">物料单价</TableHead>
+                          <TableHead className="whitespace-nowrap px-1.5 text-xs">含税金额</TableHead>
+                          <TableHead className="whitespace-nowrap px-1.5 text-xs">小计</TableHead>
+                            </>
+                          ) : (
+                            <>
+                          <TableHead>物料名称 *</TableHead>
+                          <TableHead>规格 *</TableHead>
+                          <TableHead className="w-28">数量 *</TableHead>
+                          <TableHead className="w-36">单价 (元) *</TableHead>
+                          <TableHead className="w-36">小计 (元)</TableHead>
+                            </>
+                          )}
+                          <TableHead className="w-16 text-center text-xs">操作</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {specItems.map((item, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell className="text-center text-slate-400 text-sm">{idx + 1}</TableCell>
+                            {category === "被子件套" ? (
+                              <>
+                            <TableCell className="px-1.5">
+                              <Input value={item.partName || ""} onChange={(e) => {
+                                const newItems = [...specItems]
+                                newItems[idx] = { ...newItems[idx], partName: e.target.value }
+                                updateSpec(spec.id, { items: newItems })
+                              }} placeholder="部件名称" className="text-xs h-8 px-1.5" />
+                            </TableCell>
+                            <TableCell className="px-1.5">
+                              <Input value={item.materialName || ""} onChange={(e) => {
+                                const newItems = [...specItems]
+                                newItems[idx] = { ...newItems[idx], materialName: e.target.value }
+                                updateSpec(spec.id, { items: newItems })
+                              }} placeholder="物料名称" className="text-xs h-8 px-1.5" />
+                            </TableCell>
+                            <TableCell className="px-1.5">
+                              <Input value={item.materialCode || ""} onChange={(e) => {
+                                const newItems = [...specItems]
+                                newItems[idx] = { ...newItems[idx], materialCode: e.target.value }
+                                updateSpec(spec.id, { items: newItems })
+                              }} placeholder="牌号" className="text-xs h-8 px-1.5" />
+                            </TableCell>
+                            <TableCell className="px-1.5">
+                              <Input type="number" min="0" step="1" value={item.weight || 0} onChange={(e) => {
+                                const newItems = [...specItems]
+                                newItems[idx] = { ...newItems[idx], weight: Number(e.target.value) || 0 }
+                                updateSpec(spec.id, { items: newItems })
+                              }} placeholder="0" className="text-xs h-8 px-1.5" />
+                            </TableCell>
+                            <TableCell className="px-1.5">
+                              <Input value={item.spec || ""} onChange={(e) => {
+                                const newItems = [...specItems]
+                                newItems[idx] = { ...newItems[idx], spec: e.target.value }
+                                updateSpec(spec.id, { items: newItems })
+                              }} placeholder="幅宽(CM)" className="text-xs h-8 px-1.5" />
+                            </TableCell>
+                            <TableCell className="px-1.5">
+                              <Input type="number" min="0" step="0.01" value={item.netUsage || 0} onChange={(e) => {
+                                const newItems = [...specItems]
+                                newItems[idx] = { ...newItems[idx], netUsage: Number(e.target.value) || 0 }
+                                updateSpec(spec.id, { items: newItems })
+                              }} placeholder="0.00" className="text-xs h-8 px-1.5" />
+                            </TableCell>
+                            <TableCell className="px-1.5">
+                              <Input type="number" min="0" step="0.01" value={item.wastage || 0} onChange={(e) => {
+                                const newItems = [...specItems]
+                                newItems[idx] = { ...newItems[idx], wastage: Number(e.target.value) || 0 }
+                                updateSpec(spec.id, { items: newItems })
+                              }} placeholder="0" className="text-xs h-8 px-1.5" /><span className="text-xs text-slate-400 ml-0.5">%</span>
+                            </TableCell>
+                            <TableCell className="px-1.5">
+                              <span className="font-semibold text-slate-600 text-xs">{calcActualUsage(specItems, idx).toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </TableCell>
+                            <TableCell className="px-1.5">
+                              <Input type="number" min="0" step="0.01" value={item.unitPrice || 0} onChange={(e) => {
+                                const newItems = [...specItems]
+                                newItems[idx] = { ...newItems[idx], unitPrice: Number(e.target.value) || 0 }
+                                updateSpec(spec.id, { items: newItems })
+                              }} placeholder="0.00" className="text-xs h-8 px-1.5" />
+                            </TableCell>
+                            <TableCell className="px-1.5">
+                              <span className="font-semibold text-slate-600 text-xs">{calcTaxIncluded(specItems, idx).toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </TableCell>
+                            <TableCell className="px-1.5">
+                              <span className="font-semibold text-slate-700 text-xs">{calcSubtotal(specItems, idx).toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </TableCell>
+                              </>
+                            ) : (
+                              <>
+                            <TableCell>
+                              <Input value={item.materialName || ""} onChange={(e) => {
+                                const newItems = [...specItems]
+                                newItems[idx] = { ...newItems[idx], materialName: e.target.value }
+                                updateSpec(spec.id, { items: newItems })
+                              }} placeholder="如：服务器主机" className="text-sm" />
+                            </TableCell>
+                            <TableCell>
+                              <Input value={item.spec || ""} onChange={(e) => {
+                                const newItems = [...specItems]
+                                newItems[idx] = { ...newItems[idx], spec: e.target.value }
+                                updateSpec(spec.id, { items: newItems })
+                              }} placeholder="如：Dell R750xs" className="text-sm" />
+                            </TableCell>
+                            <TableCell>
+                              <Input type="number" min="0" step="1" value={item.quantity || 0} onChange={(e) => {
+                                const newItems = [...specItems]
+                                newItems[idx] = { ...newItems[idx], quantity: Number(e.target.value) || 0 }
+                                updateSpec(spec.id, { items: newItems })
+                              }} placeholder="0" className="text-sm" />
+                            </TableCell>
+                            <TableCell className="px-1.5">
+                              <Input type="number" min="0" step="0.01" value={item.unitPrice || 0} onChange={(e) => {
+                                const newItems = [...specItems]
+                                newItems[idx] = { ...newItems[idx], unitPrice: Number(e.target.value) || 0 }
+                                updateSpec(spec.id, { items: newItems })
+                              }} placeholder="0.00" className="text-xs h-8 px-1.5" />
+                            </TableCell>
+                            <TableCell><span className="font-semibold text-slate-700 text-xs">{calcSubtotal(specItems, idx).toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></TableCell>
+                              </>
+                            )}
+                            <TableCell className="text-center">
+                              <Button type="button" variant="ghost" size="icon" onClick={() => {
+                                if (specItems.length <= 1) return
+                                const newItems = specItems.filter((_, i) => i !== idx)
+                                updateSpec(spec.id, { items: newItems })
+                              }} disabled={specItems.length <= 1} className="text-red-400 hover:text-red-600 hover:bg-red-50"><Trash2 className="w-4 h-4" /></Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  <div className="mt-2 flex items-center gap-2">
+                    <Button type="button" variant="outline" size="sm" onClick={() => {
+                      const newItems = [...specItems, { partName: "", materialName: "", materialCode: "", weight: 0, spec: "", netUsage: 0, wastage: 0, quantity: 0, unitPrice: 0 }]
+                      updateSpec(spec.id, { items: newItems })
+                    }} className="text-slate-600 text-xs"><Plus className="w-3 h-3 mr-1" />添加一行物料</Button>
+                    <Button type="button" variant="outline" size="sm" onClick={addSpec} className="text-blue-600 border-blue-300 hover:bg-blue-50 text-xs"><Plus className="w-3 h-3 mr-1" />新增规格</Button>
+                  </div>
+                </div>
+              )
+            })}
+
+            {/* 一键新增产品规格 */}
+            <div className="mt-4 mb-4">
+              <Button type="button" onClick={addSpec} className="bg-blue-600 hover:bg-blue-700 text-white">
+                <Plus className="w-4 h-4 mr-1.5" />一键新增产品规格
+              </Button>
+              <Button type="button" onClick={handleExportCSV} variant="outline" className="ml-3 border-green-500 text-green-600 hover:bg-green-50">
+                📥 导出明细
+              </Button>
+            </div>
+          </div>
+
+          {/* 投标附件上传 */}
+          <InlineFileUpload projectId={projectId} supplierAccount={supplierAccount} />
+
+          <div className="bg-white rounded-xl shadow-sm border p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Calculator className="w-5 h-5 text-slate-500" />
+              <span className="text-sm text-slate-500">报价汇总</span>
+              <span className="text-2xl font-bold text-slate-800">{"¥"} {grandTotal.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+            <div className="flex gap-3 self-end sm:self-auto">
+              <Button type="button" variant="outline">保存草稿</Button>
+              <Button type="button" onClick={handleSubmitForm} disabled={submitting} className="bg-slate-800 hover:bg-slate-700 disabled:opacity-50">{submitting ? "提交中..." : "提交报价"}</Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ==================== App ====================
+function App() {
+  const searchParams = new URLSearchParams(window.location.search)
+  const projectId = searchParams.get("projectId") || ""
+  const projectName = searchParams.get("projectName") || ""
+  const supplierAccount = searchParams.get("supplierAccount") || ""
+  const supplierName = searchParams.get("supplierName") || ""
+  const buyer = searchParams.get("buyer") || ""
+  const budget = searchParams.get("budget") || ""
+  const bidId = searchParams.get("bidId") || ""
+
+  const [initialItems, setInitialItems] = useState<QuoteItem[]>([])
+  const [initialSpecs, setInitialSpecs] = useState<any[]>([])
+  const [initialCategory, setInitialCategory] = useState("")
+  const [loading, setLoading] = useState(!!bidId)
+
+  useEffect(() => {
+    if (!bidId || !supplierAccount) { setLoading(false); return }
+    fetch(API_BASE + "/api/supplier/bid/" + bidId + "?account=" + encodeURIComponent(supplierAccount))
+      .then(r => r.json())
+      .then(json => {
+        if (json.success && json.data) {
+          setInitialItems(json.data.items.map((it: any) => ({
+            partName: it.partName || "", materialName: it.materialName || "", materialCode: it.materialCode || "",
+            weight: it.weight || 0, spec: it.spec || "", netUsage: it.netUsage || 0, wastage: it.wastage || 0,
+            quantity: it.quantity || 1, unitPrice: it.unitPrice || 0
+          })))
+          if (json.data.specs && json.data.specs.length > 0) {
+            setInitialSpecs(json.data.specs)
+          }
+          if (json.data.category) {
+            setInitialCategory(json.data.category)
+          }
+        }
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [bidId, supplierAccount])
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center bg-slate-50"><div className="text-slate-500 text-lg">Loading...</div></div>
+  }
+
+  return <QuoteForm
+    key={bidId || "new"}
+    projectId={projectId} projectName={projectName}
+    supplierAccount={supplierAccount} supplierName={supplierName}
+    buyer={buyer} budget={budget} bidId={bidId}
+    initialItems={initialItems}
+    initialSpecs={initialSpecs}
+    initialCategory={initialCategory}
+  />
+}
+
+// ==================== InlineFileUpload ====================
+const ALLOWED_EXTS = ["pdf", "zip", "dwg", "dxf", "dgn"]
+const MAX_SIZE = 50 * 1024 * 1024
+
+interface UploadedFile {
+  id: string; file_name: string; file_size: number; file_ext: string; signed_url: string; created_at: string
+}
+
+function InlineFileUpload({ projectId, supplierAccount }: { projectId: string; supplierAccount?: string }) {
+  const [files, setFiles] = useState<UploadedFile[]>([])
+  const [uploading, setUploading] = useState(false)
+  const [progressFile, setProgressFile] = useState("")
+  const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const showToast = (msg: string, type: string) => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000) }
+
+  useEffect(() => {
+    if (!projectId) return
+    fetch(API_BASE + "/api/attachments/" + projectId)
+      .then(r => r.json()).then(data => { if (data.success) setFiles(data.data || []) }).catch(() => {})
+  }, [projectId])
+
+  const handleUpload = async (fileList: FileList | null) => {
+    if (!fileList) return
+    for (const file of Array.from(fileList)) {
+      if (file.size > MAX_SIZE) { showToast(file.name + " >50MB", "error"); continue }
+      const ext = file.name.split(".").pop()?.toLowerCase() || ""
+      if (!ALLOWED_EXTS.includes(ext)) { showToast("." + ext + " not allowed", "error"); continue }
+      setUploading(true); setProgressFile(file.name)
+      const fd = new FormData(); fd.append("file", file); fd.append("projectId", projectId); fd.append("uploadedBy", supplierAccount || "supplier"); fd.append("originalFileName", file.name)
+      try {
+        const res = await fetch(API_BASE + "/api/upload", { method: "POST", body: fd })
+        const json = await res.json()
+        if (json.success) { setFiles(prev => [json.data, ...prev]); showToast(file.name + " OK", "success") }
+        else { showToast(json.message || "Failed", "error") }
+      } catch (e: any) { showToast("Upload error: " + (e.message || "network"), "error") }
+    }
+    setUploading(false)
+    if (fileInputRef.current) fileInputRef.current.value = ""
+  }
+
+  const handleDelete = async (id: string) => {
+    try {
+      const res = await fetch(API_BASE + "/api/attachments/" + id, { method: "DELETE" })
+      const json = await res.json()
+      if (json.success) { setFiles(prev => prev.filter(f => f.id !== id)); showToast("Deleted", "success") }
+    } catch { showToast("Delete failed", "error") }
+  }
+
+  const fmtSize = (bytes: number) => bytes < 1024 ? bytes + " B" : bytes < 1048576 ? (bytes / 1024).toFixed(1) + " KB" : (bytes / 1048576).toFixed(1) + " MB"
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border p-6 mt-6">
+      <h3 className="text-base font-semibold text-slate-800 mb-4">📎 投标附件上传</h3>
+      <p className="text-xs text-slate-400 mb-4">PDF / ZIP / CAD (.dwg .dxf .dgn), max 50MB</p>
+      <div onDrop={(e: React.DragEvent) => { e.preventDefault(); handleUpload(e.dataTransfer.files) }} onDragOver={(e: React.DragEvent) => { e.preventDefault() }} onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center cursor-pointer hover:border-slate-500 hover:bg-slate-50 transition-colors mb-4">
+        <div className="text-3xl mb-2">📤</div>
+        <div className="text-sm font-medium text-slate-600">Click or drag to upload</div>
+        <div className="text-xs text-slate-400 mt-1"><strong className="text-slate-600">PDF</strong> / <strong className="text-slate-600">ZIP</strong> / <strong className="text-slate-600">CAD</strong></div>
+        <input ref={fileInputRef} type="file" accept=".pdf,.zip,.dwg,.dxf,.dgn" multiple className="hidden" onChange={(e) => handleUpload(e.target.files)} />
+      </div>
+      {uploading && <div className="mb-4"><div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden"><div className="h-full bg-emerald-500 rounded-full animate-pulse" style={{ width: "60%" }} /></div><div className="text-xs text-slate-500 mt-1">Uploading: {progressFile}</div></div>}
+      <div className="text-sm font-medium text-slate-700 mb-2">Files ({files.length})</div>
+      {files.length === 0 ? <div className="text-center py-8 text-sm text-slate-400">No files</div> : (
+        <div className="space-y-2">
+          {files.map((f) => {
+            const ext = (f.file_ext || "").toLowerCase()
+            const iconCls = ext === "pdf" ? "bg-red-50 text-red-500" : ext === "zip" ? "bg-orange-50 text-orange-500" : "bg-blue-50 text-blue-600"
+            const iconEmoji = ext === "pdf" ? "📄" : ext === "zip" ? "📦" : "📐"
+            return (
+              <div key={f.id} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-slate-50 transition-colors">
+                <div className={"w-8 h-8 rounded-md flex items-center justify-center text-sm shrink-0 " + iconCls}>{iconEmoji}</div>
+                <div className="flex-1 min-w-0"><div className="text-sm font-medium truncate">{f.file_name}</div><div className="text-xs text-slate-400">{fmtSize(f.file_size)} · {(f.file_ext || "").toUpperCase()} · {f.created_at ? new Date(f.created_at).toLocaleString() : ""}</div></div>
+                <div className="flex gap-1 shrink-0">
+                  {f.signed_url && <button type="button" onClick={() => window.open(f.signed_url, "_blank")} className="h-7 px-3 text-xs border rounded hover:border-slate-400">View</button>}
+                  <button type="button" onClick={() => handleDelete(f.id)} className="h-7 px-3 text-xs border rounded hover:border-red-400 hover:text-red-500">Delete</button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+      {toast && <div className={"fixed top-6 left-1/2 -translate-x-1/2 px-6 py-2.5 rounded-lg text-sm font-medium shadow-lg z-50 " + (toast.type === "success" ? "bg-emerald-500 text-white" : "bg-red-500 text-white")}>{toast.msg}</div>}
+    </div>
+  )
+}
+
+export default App

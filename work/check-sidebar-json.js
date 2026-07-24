@@ -1,0 +1,1 @@
+﻿var fs=require("fs");var sb=JSON.parse(fs.readFileSync("work/js_sidebar.json","utf8"));console.log("js_sidebar has",sb.length,"lines:");sb.forEach(function(l,i){console.log(i+":",l.substring(0,120));});

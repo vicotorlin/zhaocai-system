@@ -1,0 +1,207 @@
+﻿// 招采管理系统 - Prisma Schema
+// Procurement & Bidding Management System
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== 枚举类型 ====================
+
+/// 用户角色
+enum UserRole {
+  BUYER     // 采购方
+  SUPPLIER  // 供应商
+  ADMIN     // 管理员
+}
+
+/// 项目状态
+enum ProjectStatus {
+  DRAFT       // 草稿
+  BIDDING     // 招标中
+  EVALUATING  // 评标中
+  AWARDED     // 已定标
+  CLOSED      // 已截止
+  CANCELLED   // 已取消
+}
+
+/// 报价单状态
+enum BidStatus {
+  DRAFT      // 草稿
+  SUBMITTED  // 已提交
+  MODIFIED   // 已修改
+  WITHDRAWN  // 已撤回
+}
+
+// ==================== 核心实体 ====================
+
+/// 用户表
+model User {
+  id        String   @id @default(uuid())
+  account   String   @unique           // 登录账号（邮箱/手机号）
+  password  String                      // 密码哈希
+  name      String?                     // 用户名称
+  role      UserRole @default(SUPPLIER) // 角色
+  phone     String?                     // 联系电话
+  email     String?                     // 联系邮箱
+  company   String?                     // 公司名称
+  avatar    String?                     // 头像URL
+  isActive  Boolean  @default(true)    // 是否启用
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 关系
+  projects   Project[]  @relation("Buyer")     // 作为采购方发布的项目
+  bids       Bid[]                              // 作为供应商提交的报价
+
+  @@index([role])
+  @@index([account])
+  @@index([company])
+  @@map("users")
+}
+
+/// 招标项目表
+model Project {
+  id              String        @id @default(uuid())
+  projectCode     String        @unique            // 项目编号 (如 ZB-2026-001)
+  title           String                            // 项目名称
+  description     String?                           // 项目描述
+  category        String?                           // 采购品类
+  budget          Decimal       @default(0)         // 预算金额
+  currency        String        @default("CNY")     // 币种
+  deadline        DateTime?                         // 投标截止时间
+  bidOpeningTime  DateTime?                         // 开标时间
+  status          ProjectStatus @default(DRAFT)     // 项目状态
+  winningBidId    String?                           // 中标报价单ID
+
+  // 采购方
+  buyerId         String
+  buyer           User          @relation("Buyer", fields: [buyerId], references: [id])
+
+  // 时间戳
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // 关系
+  bids            Bid[]
+  attachments     Attachment[]
+
+  @@index([buyerId])
+  @@index([status])
+  @@index([deadline])
+  @@index([projectCode])
+  @@index([category])
+  @@map("projects")
+}
+
+/// 报价单表
+model Bid {
+  id              String    @id @default(uuid())
+  bidCode         String    @unique            // 报价单号 (如 BID-2026-001)
+
+  // 关联
+  projectId       String
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  supplierId      String
+  supplier        User      @relation(fields: [supplierId], references: [id])
+
+  // 报价信息
+  category        String?                       // 报价类目
+  totalAmount     Decimal   @default(0)         // 总报价金额
+  validityDays    Int       @default(30)        // 报价有效期（天）
+  status          BidStatus @default(DRAFT)     // 状态
+  notes           String?                       // 备注说明
+  submittedAt     DateTime?                     // 提交时间
+
+  // 费用拆分
+  materialCost    Decimal   @default(0)         // 材料费用
+  laborCost       Decimal   @default(0)         // 人工费用
+  manufacturingCost Decimal @default(0)         // 制造费用
+  adminCost       Decimal   @default(0)         // 管理费用
+  profit          Decimal   @default(0)         // 利润
+  tax             Decimal   @default(0)         // 税金
+
+  // 时间戳
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // 关系
+  items           BidItem[]
+  attachments     Attachment[]
+
+  @@index([projectId])
+  @@index([supplierId])
+  @@index([status])
+  @@index([bidCode])
+  @@index([projectId, supplierId])  // 防止同一供应商对同一项目重复报价
+  @@map("bids")
+}
+
+/// 报价明细表
+model BidItem {
+  id            String  @id @default(uuid())
+
+  // 关联
+  bidId         String
+  bid           Bid     @relation(fields: [bidId], references: [id], onDelete: Cascade)
+
+  // 物料信息
+  partName      String?                       // 部件名称（如：被面、被里）
+  materialName  String                        // 物料名称
+  materialCode  String?                       // 物料牌号/编码
+  specification String?                       // 规格/幅宽
+  unit          String?  @default("个")       // 单位
+
+  // 用量与价格
+  gramWeight    Decimal? @default(0)          // 克重
+  netUsage      Decimal? @default(0)          // 净用量
+  lossRate      Decimal? @default(0)          // 损耗率(%)
+  actualUsage   Decimal? @default(0)          // 实际用量
+  unitPrice     Decimal  @default(0)          // 单价
+  quantity      Decimal  @default(1)          // 数量
+  taxIncludedAmount Decimal @default(0)       // 含税金额
+  subtotal      Decimal  @default(0)          // 小计
+
+  // 排序
+  sortOrder     Int      @default(0)
+
+  // 时间戳
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([bidId])
+  @@index([materialCode])
+  @@map("bid_items")
+}
+
+/// 附件表
+model Attachment {
+  id            String   @id @default(uuid())
+
+  // 多态关联：可关联项目或报价单
+  projectId     String?
+  project       Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  bidId         String?
+  bid           Bid?     @relation(fields: [bidId], references: [id], onDelete: Cascade)
+
+  // 文件信息
+  fileName      String                        // 原始文件名
+  fileSize      Int                           // 文件大小（字节）
+  fileType      String                        // MIME类型
+  fileUrl       String                        // 存储路径/URL
+  category      String?  @default("OTHER")    // 附件分类：BID_DOC/ DRAWING/ TECH_SPEC/ OTHER
+  description   String?                       // 附件描述
+
+  // 上传者
+  uploadedBy    String
+  uploadedAt    DateTime @default(now())
+
+  @@index([projectId])
+  @@index([bidId])
+  @@index([uploadedBy])
+  @@map("attachments")
+}

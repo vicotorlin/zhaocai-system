@@ -1,0 +1,553 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件上传组件 - 招采管理系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                         "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background: #f0f2f5; color: #333; min-height: 100vh;
+            display: flex; align-items: center; justify-content: center; padding: 20px;
+        }
+
+        .upload-container {
+            width: 100%; max-width: 680px;
+            background: #fff; border-radius: 12px; padding: 32px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        }
+
+        .upload-container h2 {
+            font-size: 20px; color: #1a1a2e; margin-bottom: 4px;
+        }
+        .upload-container .subtitle {
+            font-size: 13px; color: #999; margin-bottom: 24px;
+        }
+
+        /* ===== 配置区 ===== */
+        .config-section {
+            background: #f7f8fa; border-radius: 8px; padding: 16px 20px; margin-bottom: 24px;
+        }
+        .config-section h3 { font-size: 14px; color: #555; margin-bottom: 12px; }
+        .config-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .config-row input {
+            flex: 1; min-width: 160px; height: 38px; border: 1px solid #ddd;
+            border-radius: 6px; padding: 0 12px; font-size: 13px; outline: none;
+        }
+        .config-row input:focus { border-color: #2c5364; }
+        .config-row .btn-connect {
+            height: 38px; padding: 0 20px; border: none; border-radius: 6px;
+            background: #2c5364; color: #fff; font-size: 13px; cursor: pointer; white-space: nowrap;
+        }
+        .config-status { font-size: 12px; margin-top: 8px; }
+        .config-status.ok { color: #27ae60; }
+        .config-status.err { color: #e74c3c; }
+
+        /* ===== 上传区 ===== */
+        .drop-zone {
+            border: 2px dashed #d0d5dd; border-radius: 10px;
+            padding: 40px 20px; text-align: center; cursor: pointer;
+            transition: all 0.25s; background: #fafbfc; margin-bottom: 20px;
+            position: relative;
+        }
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: #2c5364; background: #eef4f7;
+        }
+        .drop-zone .icon-upload { font-size: 40px; margin-bottom: 10px; }
+        .drop-zone .title { font-size: 15px; font-weight: 500; color: #333; margin-bottom: 6px; }
+        .drop-zone .hint { font-size: 12px; color: #999; line-height: 1.6; }
+        .drop-zone .hint .allowed { color: #2c5364; font-weight: 500; }
+        .drop-zone input[type="file"] { display: none; }
+
+        /* ===== 进度条 ===== */
+        .progress-wrap {
+            display: none; margin-bottom: 16px;
+        }
+        .progress-wrap.active { display: block; }
+        .progress-bar-bg {
+            width: 100%; height: 8px; background: #e8e8e8; border-radius: 4px; overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%; background: linear-gradient(90deg, #27ae60, #2ecc71);
+            border-radius: 4px; transition: width 0.3s; width: 0%;
+        }
+        .progress-info {
+            display: flex; justify-content: space-between; font-size: 12px; color: #888; margin-top: 6px;
+        }
+
+        /* ===== 文件列表 ===== */
+        .file-list-title {
+            font-size: 14px; font-weight: 600; color: #333; margin-bottom: 12px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .file-list-title .count { background: #eef4f7; color: #2c5364; padding: 1px 10px; border-radius: 10px; font-size: 12px; }
+
+        .file-item {
+            display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+            border: 1px solid #eee; border-radius: 8px; margin-bottom: 8px;
+            transition: all 0.2s;
+        }
+        .file-item:hover { border-color: #d0d5dd; background: #fafbfc; }
+        .file-icon {
+            width: 40px; height: 40px; border-radius: 8px; display: flex;
+            align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;
+        }
+        .file-icon.pdf  { background: #fde9e9; color: #e74c3c; }
+        .file-icon.zip  { background: #fef3e6; color: #e67e22; }
+        .file-icon.cad  { background: #e8f0fe; color: #2c5364; }
+        .file-info { flex: 1; min-width: 0; }
+        .file-info .name { font-size: 14px; font-weight: 500; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .file-info .meta { font-size: 12px; color: #999; margin-top: 2px; }
+        .file-actions { display: flex; gap: 8px; flex-shrink: 0; }
+        .file-actions button {
+            height: 30px; padding: 0 14px; border-radius: 6px; font-size: 12px;
+            cursor: pointer; transition: all 0.2s; border: 1px solid #ddd;
+            background: #fff; color: #555;
+        }
+        .file-actions button:hover { border-color: #2c5364; color: #2c5364; }
+        .file-actions button.danger:hover { border-color: #e74c3c; color: #e74c3c; }
+
+        .empty-state { text-align: center; padding: 40px 20px; color: #ccc; font-size: 14px; }
+
+        /* ===== Toast ===== */
+        .toast {
+            position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
+            padding: 12px 28px; border-radius: 8px; font-size: 14px; font-weight: 500;
+            z-index: 9999; animation: toastIn 0.3s ease; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+        .toast.success { background: #27ae60; color: #fff; }
+        .toast.error { background: #e74c3c; color: #fff; }
+        @keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(-12px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+
+        @media (max-width: 480px) {
+            .upload-container { padding: 20px 16px; }
+            .config-row { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="upload-container">
+    <h2>📎 文件上传</h2>
+    <p class="subtitle">上传投标文件、资质证明、技术方案等附件</p>
+
+    <!-- Supabase 连接配置 -->
+    <div class="config-section">
+        <h3>⚙️ Supabase 连接配置</h3>
+        <div class="config-row">
+            <input type="text" id="supabaseUrl" placeholder="Supabase Project URL" value="">
+            <input type="text" id="supabaseKey" placeholder="anon / public key" value="">
+            <button class="btn-connect" id="btnConnect" onclick="initSupabase()">连接</button>
+        </div>
+        <div class="config-status" id="configStatus"></div>
+    </div>
+
+    <!-- 拖拽上传区 -->
+    <div class="drop-zone" id="dropZone">
+        <div class="icon-upload">📤</div>
+        <div class="title">点击或拖拽文件到此处上传</div>
+        <div class="hint">
+            支持格式：<span class="allowed">PDF</span>、
+            <span class="allowed">ZIP</span>、
+            <span class="allowed">CAD</span>（.dwg / .dxf / .dgn）<br>
+            单个文件最大 <span class="allowed">50 MB</span>
+        </div>
+        <input type="file" id="fileInput" accept=".pdf,.zip,.dwg,.dxf,.dgn" multiple>
+    </div>
+
+    <!-- 进度条 -->
+    <div class="progress-wrap" id="progressWrap">
+        <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-info">
+            <span id="progressFilename">--</span>
+            <span id="progressPercent">0%</span>
+        </div>
+    </div>
+
+    <!-- 已上传列表 -->
+    <div class="file-list-title">
+        📋 已上传文件 <span class="count" id="fileCount">0</span>
+        <span style="margin-left:auto;font-size:12px;font-weight:400;color:#999;" id="listHint"></span>
+    </div>
+    <div id="fileList">
+        <div class="empty-state">暂无上传文件</div>
+    </div>
+</div>
+
+<!-- Supabase JS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+(function () {
+    // ========== 配置 ==========
+    var ALLOWED_TYPES = {
+        "application/pdf": "pdf",
+        "application/zip": "zip",
+        "application/x-zip-compressed": "zip",
+        "application/x-7z-compressed": "zip",
+        "image/vnd.dwg": "cad",
+        "application/x-dwg": "cad",
+        "application/dxf": "cad",
+        "application/x-dxf": "cad",
+        "application/octet-stream": null  // 需要进一步判断扩展名
+    };
+
+    var ALLOWED_EXTENSIONS = ["pdf", "zip", "dwg", "dxf", "dgn"];
+    var MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+    var BUCKET_NAME = "attachments";
+
+    var supabase = null;
+    var uploadedFiles = []; // 本地缓存已上传列表
+
+    // ========== 初始化 Supabase ==========
+    window.initSupabase = function () {
+        var url = document.getElementById("supabaseUrl").value.trim();
+        var key = document.getElementById("supabaseKey").value.trim();
+        var statusEl = document.getElementById("configStatus");
+
+        if (!url || !key) {
+            statusEl.textContent = "⚠ 请输入 Supabase URL 和 Key";
+            statusEl.className = "config-status err";
+            return;
+        }
+
+        // 保存到 localStorage
+        localStorage.setItem("supabase_url", url);
+        localStorage.setItem("supabase_key", key);
+
+        try {
+            supabase = window.supabase.createClient(url, key);
+            statusEl.textContent = "✓ Supabase 已连接";
+            statusEl.className = "config-status ok";
+            document.getElementById("btnConnect").textContent = "已连接 ✓";
+            document.getElementById("btnConnect").disabled = true;
+
+            // 连接成功后加载已上传列表
+            loadUploadedFiles();
+        } catch (e) {
+            statusEl.textContent = "✗ 连接失败：" + e.message;
+            statusEl.className = "config-status err";
+        }
+    };
+
+    // 页面加载时尝试从 localStorage 恢复配置
+    (function restoreConfig() {
+        var url = localStorage.getItem("supabase_url");
+        var key = localStorage.getItem("supabase_key");
+        if (url) document.getElementById("supabaseUrl").value = url;
+        if (key) document.getElementById("supabaseKey").value = key;
+        if (url && key) initSupabase();
+    })();
+
+    // ========== 文件类型校验 ==========
+    function validateFile(file) {
+        // 1. 检查大小
+        if (file.size > MAX_FILE_SIZE) {
+            return { valid: false, message: "文件 \"" + file.name + "\" 超过 50MB 限制（实际 " + formatSize(file.size) + "）" };
+        }
+        if (file.size === 0) {
+            return { valid: false, message: "文件 \"" + file.name + "\" 为空" };
+        }
+
+        // 2. 检查扩展名
+        var ext = file.name.split(".").pop().toLowerCase();
+        if (ALLOWED_EXTENSIONS.indexOf(ext) === -1) {
+            return { valid: false, message: "不支持的文件格式: ." + ext + "（仅支持 PDF / ZIP / CAD）" };
+        }
+
+        // 3. 检查 MIME 类型（CAD 文件 MIME 可能不标准，以扩展名为准）
+        if (ext === "dwg" || ext === "dxf" || ext === "dgn") {
+            return { valid: true, ext: ext, cat: "cad" };
+        }
+        if (ext === "zip") {
+            return { valid: true, ext: ext, cat: "zip" };
+        }
+        if (ext === "pdf" && file.type !== "application/pdf" && file.type !== "") {
+            return { valid: false, message: "文件 \"" + file.name + "\" MIME 类型不匹配" };
+        }
+
+        return { valid: true, ext: ext, cat: ext };
+    }
+
+    function getFileCategory(ext) {
+        if (ext === "pdf") return "pdf";
+        if (ext === "zip") return "zip";
+        if (["dwg", "dxf", "dgn"].indexOf(ext) !== -1) return "cad";
+        return "other";
+    }
+
+    function formatSize(bytes) {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+        return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    }
+
+    // ========== 上传逻辑 ==========
+    async function uploadFile(file) {
+        if (!supabase) {
+            showToast("请先连接 Supabase", "error");
+            return;
+        }
+
+        // 校验
+        var validation = validateFile(file);
+        if (!validation.valid) {
+            showToast(validation.message, "error");
+            return;
+        }
+
+        // 生成存储路径：uploads/YYYY/MM/DD/timestamp_random.ext
+        var now = new Date();
+        var datePath = now.getFullYear() + "/" +
+            String(now.getMonth() + 1).padStart(2, "0") + "/" +
+            String(now.getDate()).padStart(2, "0");
+        var storagePath = "uploads/" + datePath + "/" + Date.now() + "_" +
+            Math.random().toString(36).substring(2, 8) + "." + validation.ext;
+
+        // 显示进度
+        var progressWrap = document.getElementById("progressWrap");
+        var progressFill = document.getElementById("progressFill");
+        var progressFilename = document.getElementById("progressFilename");
+        var progressPercent = document.getElementById("progressPercent");
+
+        progressWrap.classList.add("active");
+        progressFilename.textContent = file.name;
+        progressPercent.textContent = "0%";
+        progressFill.style.width = "0%";
+
+        try {
+            // 上传到 Supabase Storage
+            var _a = await supabase.storage
+                .from(BUCKET_NAME)
+                .upload(storagePath, file, {
+                    cacheControl: "3600",
+                    upsert: false,
+                    onUploadProgress: function (progress) {
+                        var pct = Math.round((progress.loaded / progress.total) * 100);
+                        progressFill.style.width = pct + "%";
+                        progressPercent.textContent = pct + "%";
+                    }
+                }), uploadResult = _a.data, uploadError = _a.error;
+
+            if (uploadError) throw uploadError;
+
+            // 生成带签名的临时 URL（7天有效）
+            var _b = await supabase.storage
+                .from(BUCKET_NAME)
+                .createSignedUrl(storagePath, 60 * 60 * 24 * 7), signedData = _b.data, signedError = _b.error;
+
+            if (signedError) throw signedError;
+
+            var signedUrl = signedData.signedUrl;
+
+            // 插入 Attachment 表记录
+            var _c = await supabase
+                .from("attachments")
+                .insert({
+                    project_id: null,
+                    file_name: file.name,
+                    file_size: file.size,
+                    file_type: file.type || "application/octet-stream",
+                    file_ext: validation.ext,
+                    bucket_name: BUCKET_NAME,
+                    storage_path: storagePath,
+                    signed_url: signedUrl,
+                    signed_url_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                    uploaded_by: "system",
+                    upload_ip: "0.0.0.0",
+                    status: "active"
+                })
+                .select(), insertData = _c.data, insertError = _c.error;
+
+            if (insertError) throw insertError;
+
+            var record = insertData[0];
+
+            // 添加到本地列表
+            uploadedFiles.push({
+                id: record.id,
+                file_name: record.file_name,
+                file_size: record.file_size,
+                file_ext: record.file_ext,
+                signed_url: record.signed_url,
+                created_at: record.created_at
+            });
+
+            showToast("✓ " + file.name + " 上传成功", "success");
+            renderFileList();
+
+        } catch (err) {
+            console.error("Upload error:", err);
+            showToast("上传失败: " + (err.message || err.error_description || "未知错误"), "error");
+        } finally {
+            progressWrap.classList.remove("active");
+        }
+    }
+
+    // ========== 加载已上传文件列表 ==========
+    async function loadUploadedFiles() {
+        if (!supabase) return;
+
+        try {
+            var _a = await supabase
+                .from("attachments")
+                .select("*")
+                .eq("status", "active")
+                .order("created_at", { ascending: false }), data = _a.data, error = _a.error;
+
+            if (error) throw error;
+
+            uploadedFiles = (data || []).map(function (r) {
+                return {
+                    id: r.id,
+                    file_name: r.file_name,
+                    file_size: r.file_size,
+                    file_ext: r.file_ext,
+                    signed_url: r.signed_url,
+                    created_at: r.created_at
+                };
+            });
+
+            renderFileList();
+        } catch (err) {
+            console.error("Load files error:", err);
+        }
+    }
+
+    // ========== 渲染文件列表 ==========
+    function renderFileList() {
+        var container = document.getElementById("fileList");
+        document.getElementById("fileCount").textContent = uploadedFiles.length;
+
+        if (uploadedFiles.length === 0) {
+            container.innerHTML = '<div class="empty-state">暂无上传文件</div>';
+            return;
+        }
+
+        container.innerHTML = uploadedFiles.map(function (f) {
+            var cat = getFileCategory(f.file_ext);
+            var iconEmoji = cat === "pdf" ? "📄" : cat === "zip" ? "📦" : "📐";
+            return '<div class="file-item">' +
+                '<div class="file-icon ' + cat + '">' + iconEmoji + '</div>' +
+                '<div class="file-info">' +
+                '<div class="name" title="' + escapeHtml(f.file_name) + '">' + escapeHtml(f.file_name) + '</div>' +
+                '<div class="meta">' + formatSize(f.file_size) + ' · ' + f.file_ext.toUpperCase() + ' · ' + formatDate(f.created_at) + '</div>' +
+                '</div>' +
+                '<div class="file-actions">' +
+                '<button onclick="previewFile(\'' + f.id + '\')">🔗 预览</button>' +
+                '<button onclick="copyUrl(\'' + f.id + '\')">📋 复制链接</button>' +
+                '<button class="danger" onclick="deleteFile(\'' + f.id + '\')">🗑 删除</button>' +
+                '</div>' +
+                '</div>';
+        }).join("");
+    }
+
+    function escapeHtml(str) {
+        var div = document.createElement("div");
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    function formatDate(dateStr) {
+        if (!dateStr) return "--";
+        var d = new Date(dateStr);
+        return d.getFullYear() + "-" +
+            String(d.getMonth() + 1).padStart(2, "0") + "-" +
+            String(d.getDate()).padStart(2, "0") + " " +
+            String(d.getHours()).padStart(2, "0") + ":" +
+            String(d.getMinutes()).padStart(2, "0");
+    }
+
+    // ========== 操作按钮 ==========
+    window.previewFile = function (id) {
+        var file = uploadedFiles.find(function (f) { return f.id === id; });
+        if (file && file.signed_url) {
+            window.open(file.signed_url, "_blank");
+        } else {
+            showToast("无法获取文件链接", "error");
+        }
+    };
+
+    window.copyUrl = function (id) {
+        var file = uploadedFiles.find(function (f) { return f.id === id; });
+        if (file && file.signed_url) {
+            navigator.clipboard.writeText(file.signed_url).then(function () {
+                showToast("链接已复制到剪贴板", "success");
+            }).catch(function () {
+                showToast("复制失败，请手动复制", "error");
+            });
+        }
+    };
+
+    window.deleteFile = async function (id) {
+        if (!confirm("确定要删除此文件吗？此操作不可撤销。")) return;
+        if (!supabase) return;
+
+        try {
+            // 软删除：更新状态为 deleted
+            var _a = await supabase
+                .from("attachments")
+                .update({ status: "deleted" })
+                .eq("id", id), error = _a.error;
+            if (error) throw error;
+
+            uploadedFiles = uploadedFiles.filter(function (f) { return f.id !== id; });
+            renderFileList();
+            showToast("文件已删除", "success");
+        } catch (err) {
+            showToast("删除失败: " + (err.message || "未知错误"), "error");
+        }
+    };
+
+    // ========== 拖拽 & 点击上传 ==========
+    var dropZone = document.getElementById("dropZone");
+    var fileInput = document.getElementById("fileInput");
+
+    dropZone.addEventListener("click", function () { fileInput.click(); });
+
+    dropZone.addEventListener("dragover", function (e) {
+        e.preventDefault();
+        dropZone.classList.add("drag-over");
+    });
+
+    dropZone.addEventListener("dragleave", function () {
+        dropZone.classList.remove("drag-over");
+    });
+
+    dropZone.addEventListener("drop", function (e) {
+        e.preventDefault();
+        dropZone.classList.remove("drag-over");
+
+        var files = Array.from(e.dataTransfer.files);
+        if (files.length === 0) return;
+
+        files.forEach(function (file) { uploadFile(file); });
+    });
+
+    fileInput.addEventListener("change", function () {
+        var files = Array.from(fileInput.files);
+        files.forEach(function (file) { uploadFile(file); });
+        fileInput.value = "";
+    });
+
+    // ========== Toast ==========
+    function showToast(msg, type) {
+        var el = document.createElement("div");
+        el.className = "toast " + type;
+        el.textContent = msg;
+        document.body.appendChild(el);
+        setTimeout(function () {
+            el.style.opacity = "0";
+            el.style.transition = "opacity 0.3s";
+            setTimeout(function () { el.remove(); }, 300);
+        }, 2500);
+    }
+})();
+</script>
+</body>
+</html>

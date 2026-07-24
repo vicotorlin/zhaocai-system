@@ -1,0 +1,29 @@
+﻿<html>
+<head>
+<meta charset="UTF-8">
+<title>Test</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: sans-serif; }
+.topbar { background: #2c5364; color: #fff; padding: 0 28px; height: 56px; display: flex; align-items: center; }
+.layout { display: flex; min-height: calc(100vh - 56px); }
+.sidebar { width: 220px; background: #fff; border-right: 1px solid #e8e8e8; padding: 16px 0; flex-shrink: 0; }
+.main { flex: 1; padding: 24px 28px; overflow-y: auto; }
+.view { display: none; }
+.view.active { display: block; }
+</style>
+</head>
+<body>
+<div class="topbar">TEST - Topbar</div>
+<div class="layout">
+  <div class="sidebar" id="sidebar">SIDEBAR</div>
+  <div class="main">
+    <div class="view active" id="view-test">MAIN CONTENT - This view is active</div>
+  </div>
+</div>
+<script>
+document.getElementById("sidebar").innerHTML = '<div>Menu Item 1</div><div>Menu Item 2</div>';
+console.log("Sidebar populated");
+</script>
+</body>
+</html>

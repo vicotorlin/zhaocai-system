@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>网易严选招采管理系统</title>
+<style>
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                         "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background: #f0f2f5; color: #333; min-height: 100vh;
+        }
+
+        /* ===== 顶部导航 ===== */
+        .topbar {
+            background: linear-gradient(135deg, #0f2027, #2c5364);
+            color: #fff; padding: 0 28px; height: 56px;
+            display: flex; align-items: center; justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15); position: sticky; top: 0; z-index: 100;
+        }
+        .topbar .logo { font-size: 18px; font-weight: 600; letter-spacing: 1px; display: flex; align-items: center; gap: 10px; }
+        .topbar .logo .dot { width: 8px; height: 8px; background: #27ae60; border-radius: 50%; box-shadow: 0 0 8px rgba(39,174,96,0.6); }
+        .topbar .user-area { display: flex; align-items: center; gap: 16px; font-size: 14px; }
+        .topbar .user-area .role-tag {
+            background: rgba(255,255,255,0.15); padding: 3px 12px; border-radius: 12px; font-size: 12px;
+        }
+        .topbar .btn-logout {
+            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25);
+            color: #fff; padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 13px;
+            transition: all 0.2s;
+        }
+        .topbar .btn-logout:hover { background: rgba(255,255,255,0.2); }
+
+        /* ===== 侧栏 ===== */
+        .layout { display: flex; min-height: calc(100vh - 56px); }
+        .sidebar { width: 220px; background: #fff; border-right: 1px solid #e8e8e8; padding: 16px 0; flex-shrink: 0; }
+        .sidebar .menu-item {
+            display: flex; align-items: center; gap: 10px; padding: 12px 24px;
+            font-size: 14px; color: #555; cursor: pointer; transition: all 0.15s;
+            border-left: 3px solid transparent;
+        }
+        .sidebar .menu-item:hover { background: #f5f7fa; color: #2c5364; }
+        .sidebar .menu-item.active {
+            background: #eef4f7; color: #2c5364; font-weight: 600;
+            border-left-color: #2c5364;
+        }
+        .sidebar .menu-item .icon { font-size: 16px; width: 20px; text-align: center; }
+
+        /* ===== 主内容 ===== */
+        .main { flex: 1; padding: 24px 28px; overflow-y: auto; }
+
+        .page-title { font-size: 20px; font-weight: 600; color: #1a1a2e; margin-bottom: 20px; }
+
+        /* ===== 统计卡片 ===== */
+        .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+        .stat-card {
+            background: #fff; border-radius: 10px; padding: 20px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06); display: flex; align-items: center; gap: 16px;
+        }
+        .stat-card .stat-icon {
+            width: 48px; height: 48px; border-radius: 10px; display: flex;
+            align-items: center; justify-content: center; font-size: 22px;
+        }
+        .stat-card .stat-icon.blue   { background: #e8f0fe; color: #2c5364; }
+        .stat-card .stat-icon.green  { background: #e6f7e6; color: #27ae60; }
+        .stat-card .stat-icon.orange { background: #fef3e6; color: #e67e22; }
+        .stat-card .stat-icon.red    { background: #fde9e9; color: #e74c3c; }
+        .stat-card .stat-info .num  { font-size: 24px; font-weight: 700; color: #1a1a2e; }
+        .stat-card .stat-info .lbl  { font-size: 13px; color: #999; margin-top: 2px; }
+
+        /* ===== 搜索 & 筛选 ===== */
+        .toolbar {
+            background: #fff; border-radius: 10px; padding: 16px 20px;
+            margin-bottom: 16px; display: flex; align-items: center; gap: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06); flex-wrap: wrap;
+        }
+        .toolbar input, .toolbar select {
+            height: 36px; border: 1px solid #ddd; border-radius: 6px;
+            padding: 0 12px; font-size: 13px; outline: none; transition: border-color 0.2s;
+        }
+        .toolbar input:focus, .toolbar select:focus { border-color: #2c5364; }
+        .toolbar input { flex: 1; min-width: 180px; }
+        .toolbar select { min-width: 130px; cursor: pointer; }
+        .toolbar .btn-search {
+            height: 36px; padding: 0 20px; border: none; border-radius: 6px;
+            background: #2c5364; color: #fff; font-size: 13px; cursor: pointer; transition: all 0.2s;
+        }
+        .toolbar .btn-search:hover { background: #3a6b80; }
+
+        /* ===== 表格 ===== */
+        .table-wrap {
+            background: #fff; border-radius: 10px; overflow: hidden;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        thead { background: #f7f8fa; }
+        th, td { padding: 14px 16px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+        th { font-weight: 600; color: #555; font-size: 13px; white-space: nowrap; }
+        td { color: #333; }
+        tr:hover td { background: #fafbfc; }
+
+        .status {
+            display: inline-block; padding: 3px 10px; border-radius: 10px;
+            font-size: 12px; font-weight: 500;
+        }
+        .status.open     { background: #e6f7e6; color: #27ae60; }
+        .status.progress { background: #fef3e6; color: #e67e22; }
+        .status.closed   { background: #f0f0f0; color: #999; }
+
+        .btn-quote {
+            height: 30px; padding: 0 16px; border: 1px solid #2c5364; border-radius: 6px;
+            background: #fff; color: #2c5364; font-size: 12px; font-weight: 500;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-quote:hover { background: #2c5364; color: #fff; }
+        .btn-quote:disabled { border-color:#ccc; color:#bbb; cursor:not-allowed; background:#f5f5f5; }
+        .btn-detail { height:30px; padding:0 16px; border:1px solid #ddd; border-radius:6px; background:#fff; color:#555; font-size:12px; cursor:pointer; transition:all 0.2s; }
+        .btn-detail:hover { border-color:#2c5364; color:#2c5364; }
+
+        /* ===== Modal ===== */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.45); z-index: 200; align-items: center; justify-content: center;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal {
+            background: #fff; border-radius: 12px; width: 520px; max-width: 95vw;
+            padding: 28px 32px; box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+            animation: modalIn 0.25s ease;
+        }
+        @keyframes modalIn { from { opacity:0; transform: translateY(-20px) scale(0.96); } to { opacity:1; transform: translateY(0) scale(1); } }
+        .modal h3 { font-size: 18px; color: #1a1a2e; margin-bottom: 20px; }
+        .modal .modal-info { background: #f7f8fa; border-radius: 8px; padding: 16px; margin-bottom: 20px; font-size: 13px; line-height: 1.8; color: #555; }
+        .modal .modal-info strong { color: #333; }
+        .modal .form-group { margin-bottom: 16px; }
+        .modal .form-group label { display: block; font-size: 14px; font-weight: 500; color: #333; margin-bottom: 6px; }
+        .modal .form-group input, .modal .form-group textarea {
+            width: 100%; border: 1.5px solid #e0e0e0; border-radius: 6px;
+            padding: 10px 14px; font-size: 14px; outline: none; transition: all 0.2s;
+            font-family: inherit;
+        }
+        .modal .form-group input:focus, .modal .form-group textarea:focus { border-color: #2c5364; }
+        .modal .form-group textarea { resize: vertical; min-height: 80px; }
+        .modal .modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; }
+        .modal .btn-cancel { height: 38px; padding: 0 24px; border: 1px solid #ddd; border-radius: 6px; background: #fff; color: #666; font-size: 14px; cursor: pointer; }
+        .modal .btn-submit-modal { height: 38px; padding: 0 24px; border: none; border-radius: 6px; background: linear-gradient(135deg,#203a43,#2c5364); color: #fff; font-size: 14px; font-weight: 500; cursor: pointer; }
+        .modal .btn-submit-modal:hover { box-shadow: 0 4px 12px rgba(44,83,100,0.3); }
+
+        .toast {
+            position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
+            padding: 12px 28px; border-radius: 8px; font-size: 14px; font-weight: 500;
+            z-index: 999; animation: toastIn 0.3s ease; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+        .toast.success { background: #27ae60; color: #fff; }
+        .toast.error   { background: #e74c3c; color: #fff; }
+        @keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(-12px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: #bbb; }
+        .empty-state .big { font-size: 48px; margin-bottom: 12px; }
+
+        
+
+        /* ===== 侧栏增强 ===== */
+        .menu-group-label {
+            padding: 8px 24px 4px; font-size: 11px; color: #bbb; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .menu-divider { height: 1px; background: #eee; margin: 6px 16px; }
+        .menu-item { cursor: pointer; user-select: none; }
+
+        /* ===== 视图系统 ===== */
+        .view { display: none; }
+        .view.active { display: block; }
+
+        /* ===== iframe 容器 ===== */
+        .iframe-wrap { background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+        /* ===== 文件上传区 ===== */
+        .upload-section { margin-top: 24px; background: #fff; border-radius: 10px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+        .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+        .section-header h3 { font-size: 16px; color: #1a1a2e; }
+        .section-hint { font-size: 12px; color: #999; }
+        .config-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; padding: 10px 14px; background: #f7f8fa; border-radius: 6px; }
+        .config-bar input { height: 32px; border: 1px solid #ddd; border-radius: 5px; padding: 0 10px; font-size: 12px; outline: none; flex: 1; min-width: 140px; }
+        .config-bar input:focus { border-color: #2c5364; }
+        .btn-connect-sm { height: 32px; padding: 0 14px; border: none; border-radius: 5px; background: #2c5364; color: #fff; font-size: 12px; cursor: pointer; white-space: nowrap; }
+        .config-status { font-size: 11px; }
+        .config-status.ok { color: #27ae60; }
+        .config-status.err { color: #e74c3c; }
+        .drop-zone { border: 2px dashed #d0d5dd; border-radius: 8px; padding: 30px 20px; text-align: center; cursor: pointer; transition: all 0.25s; background: #fafbfc; margin-bottom: 16px; }
+        .drop-zone:hover, .drop-zone.drag-over { border-color: #2c5364; background: #eef4f7; }
+        .drop-zone .icon-upload { font-size: 32px; margin-bottom: 6px; }
+        .drop-zone .title { font-size: 14px; font-weight: 500; color: #333; }
+        .drop-zone .hint { font-size: 12px; color: #999; margin-top: 4px; }
+        .drop-zone .hint strong { color: #2c5364; }
+        .drop-zone input[type='file'] { display: none; }
+        .progress-wrap { display: none; margin-bottom: 16px; }
+        .progress-wrap.active { display: block; }
+        .progress-bar-bg { width: 100%; height: 6px; background: #e8e8e8; border-radius: 3px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; background: linear-gradient(90deg, #27ae60, #2ecc71); border-radius: 3px; transition: width 0.3s; width: 0%; }
+        .progress-info { display: flex; justify-content: space-between; font-size: 11px; color: #888; margin-top: 4px; }
+        .file-list-header { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #333; margin-bottom: 10px; }
+        .fcount { background: #eef4f7; color: #2c5364; padding: 1px 10px; border-radius: 10px; font-size: 11px; }
+        .file-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid #eee; border-radius: 6px; margin-bottom: 6px; font-size: 13px; }
+        .file-item:hover { border-color: #d0d5dd; background: #fafbfc; }
+        .file-icon-sm { width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+        .file-icon-sm.pdf { background: #fde9e9; color: #e74c3c; }
+        .file-icon-sm.zip { background: #fef3e6; color: #e67e22; }
+        .file-icon-sm.cad { background: #e8f0fe; color: #2c5364; }
+        .file-info-sm { flex: 1; min-width: 0; }
+        .file-info-sm .fname { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .file-info-sm .fmeta { font-size: 11px; color: #999; }
+        .file-actions-sm { display: flex; gap: 6px; flex-shrink: 0; }
+        .file-actions-sm button { height: 26px; padding: 0 10px; border-radius: 4px; font-size: 11px; cursor: pointer; border: 1px solid #ddd; background: #fff; color: #555; transition: all 0.15s; }
+        .file-actions-sm button:hover { border-color: #2c5364; color: #2c5364; }
+        .file-actions-sm button.danger:hover { border-color: #e74c3c; color: #e74c3c; }
+
+@media (max-width: 768px) {
+            .sidebar { display: none; }
+            .layout { flex-direction: column; }
+            .main { height: auto; }
+            .stat-cards { grid-template-columns: repeat(2,1fr); }
+            th, td { padding: 10px 8px; font-size: 12px; }
+        }
+    
+
+
+        .modal-content { background: #fff; }
+        .bid-modal { max-width: 95vw; width: 95%; max-height: 85vh; overflow-y: auto; background: #fff; border-radius: 12px; padding: 28px 32px; box-shadow: 0 12px 40px rgba(0,0,0,0.2); animation: modalIn 0.25s ease; }
+        .bid-modal h3 { margin: 0 0 16px 0; font-size: 18px; color: #1a1a2e; }
+        .bid-modal .form-group { margin-bottom: 12px; }
+        .bid-modal .form-group label { display: block; font-size: 13px; color: #666; margin-bottom: 4px; font-weight: 600; }
+        .bid-modal .form-group input, .bid-modal .form-group select { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .bid-modal .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+        .bid-modal table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .bid-modal table th { background: #f1f5f9; padding: 5px 4px; text-align: left; font-weight: 600; font-size: 11px; white-space: nowrap; }
+        .bid-modal table td { padding: 3px 4px; border-bottom: 1px solid #e5e7eb; }
+        .bid-modal table input { width: 100%; padding: 2px 4px; border: 1px solid #d1d5db; border-radius: 3px; font-size: 11px; box-sizing: border-box; }
+        .bid-modal .btn-sm { padding: 4px 12px; font-size: 12px; }
+        .bid-modal .total-row { font-size: 16px; font-weight: 700; color: #2563eb; }
+
+</style>
+</head>
+<body>
+
+<div id="jsError" style="display:none;background:#fff3cd;color:#856404;padding:12px 24px;font-size:13px;border-bottom:2px solid #ffc107"></div>
+<div class="topbar"><div class="logo">网易严选招采管理系统</div><div class="user-area">你好，<strong id="displayAccount">--</strong><span class="role-tag" id="displayRole">--</span><button class="btn-logout" onclick="doLogout()">退出</button></div></div>
+<div class="layout"><div class="sidebar" id="sidebar"><div style="padding:16px 24px;color:#999;font-size:13px">菜单加载中...</div></div><div class="main">
+<!-- SUPPLIER: Projects -->
+<div class="view" id="view-supplier-projects">
+<div class="page-title">可报价采购项目</div><p class="page-sub">所有采购员发布的公开采购项目</p>
+<div class="stat-cards">
+<div class="stat-card"><div class="icon blue">📋</div><div><div class="num" id="sStatTotal">0</div><div class="lbl">项目总数</div></div></div>
+<div class="stat-card"><div class="icon green">✅</div><div><div class="num" id="sStatOpen">0</div><div class="lbl">进行中项目</div></div></div>
+<div class="stat-card"><div class="icon orange">📝</div><div><div class="num" id="sStatQuoted">0</div><div class="lbl">已报价</div></div></div>
+<div class="stat-card"><div class="icon purple">👥</div><div><div class="num" id="sStatBids">0</div><div class="lbl">总报价数</div></div></div>
+</div>
+<div class="toolbar"><input type="text" id="sSearch" placeholder="搜索项目名称..."><select id="sFilter"><option value="">全部状态</option><option value="open">进行中</option><option value="closed">已截止</option></select><button class="btn btn-outline" onclick="loadSupplierProjects()">刷新</button></div>
+<div id="sTableContainer"><div class="loading-text">加载中...</div></div>
+</div>
+<!-- SUPPLIER: History -->
+<div class="view" id="view-supplier-history">
+<div class="page-title">我的报价记录</div><p class="page-sub">查看和管理您的历史报价</p>
+<div class="toolbar"><input id="shSearch" placeholder="搜索项目名称..." oninput="loadSupplierHistory()" style="width:200px"><button class="btn btn-outline" onclick="loadSupplierHistory()">刷新</button></div>
+<div id="shTableContainer"><div class="empty">加载中...</div></div>
+</div>
+<!-- BUYER: Projects -->
+<div class="view" id="view-buyer-projects">
+<div class="page-title">我的采购项目</div><p class="page-sub">仅展示您发布的采购项目</p>
+<div class="toolbar"><button class="btn btn-primary" onclick="showCreateProjectModal()">+ 发布新项目</button><button class="btn btn-outline" onclick="loadBuyerProjects()">刷新</button></div>
+<div id="bTableContainer"><div class="loading-text">加载中...</div></div>
+</div>
+<!-- BUYER: Quotes -->
+<div class="view" id="view-buyer-quotes">
+<div class="page-title">供应商报价</div><p class="page-sub">查看供应商对您项目的报价回执</p>
+<div class="toolbar"><select id="bqProjectSelect" onchange="loadBuyerQuotes()"><option value="">-- 选择项目 --</option></select><button class="btn btn-outline" onclick="loadBuyerQuotes()">刷新</button></div>
+<div id="bqTableContainer"><div class="empty">请先选择一个项目</div></div>
+</div>
+<!-- BUYER: Compare -->
+<div class="view" id="view-buyer-compare">
+<div class="page-title">询比价结果</div><p class="page-sub">各供应商报价对比分析</p>
+<div class="toolbar"><select id="bcProjectSelect" onchange="loadBuyerCompare()"><option value="">-- 选择项目 --</option></select><button class="btn btn-outline" onclick="loadBuyerCompare()">刷新</button><button class="btn btn-primary" onclick="exportCompare()">导出Excel</button></div>
+<div id="bcTableContainer"><div class="empty">请先选择一个项目</div></div>
+</div>
+<!-- REVIEWER -->
+<div class="view" id="view-reviewer-projects">
+<div class="page-title">采购项目总览</div><p class="page-sub">所有采购员发布的采购项目及询比结果</p>
+<div class="stat-cards">
+<div class="stat-card"><div class="icon blue">📋</div><div><div class="num" id="rStatTotal">0</div><div class="lbl">项目总数</div></div></div>
+<div class="stat-card"><div class="icon green">🏃</div><div><div class="num" id="rStatOpen">0</div><div class="lbl">进行中</div></div></div>
+<div class="stat-card"><div class="icon orange">👥</div><div><div class="num" id="rStatBids">0</div><div class="lbl">已投标项目</div></div></div>
+<div class="stat-card"><div class="icon purple">🏆</div><div><div class="num" id="rStatWon">0</div><div class="lbl">已定标</div></div></div>
+</div>
+<div class="toolbar"><button class="btn btn-outline" onclick="loadReviewerProjects()">刷新</button></div>
+<div id="rTableContainer"><div class="loading-text">加载中...</div>
+
+<!-- ADMIN: User Approval -->
+<div class="view" id="view-admin-approval">
+<div class="page-title">用户审批管理</div><p class="page-sub">查看待审批用户并进行审批操作</p>
+<div class="stat-cards">
+<div class="stat-card"><div class="icon orange">👥</div><div><div class="num" id="aStatPending">0</div><div class="lbl">待审批用户</div></div></div>
+<div class="stat-card"><div class="icon green">✅</div><div><div class="num" id="aStatApproved">0</div><div class="lbl">已通过</div></div></div>
+<div class="stat-card"><div class="icon red">❌</div><div><div class="num" id="aStatRejected">0</div><div class="lbl">已拒绝</div></div></div>
+</div>
+<div class="toolbar"><button class="btn btn-outline" onclick="loadAdminApproval()">刷新</button></div>
+<div id="aTableContainer"><div class="loading-text">加载中...</div></div>
+</div>
+
+</div></div>
+</div>
+</div></div>
+
+<!-- Bid Form Modal -->
+<div class="modal-overlay" id="bidModal">
+<div class="modal-content bid-modal">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+<h3 id="bidTitle" style="margin:0">填写报价 <span style="font-size:10px;color:#999;font-weight:normal">v250711a</span></h3>
+<button class="btn btn-outline" onclick="closeModal('bidModal')" style="font-size:20px;padding:0 8px;line-height:1">&times;</button>
+</div>
+<div id="bidContent">
+<div id="bidProjectInfo" style="background:#f0f7ff;border:1px solid #b3d4ff;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;display:none">
+  <div style="display:flex;gap:24px;flex-wrap:wrap">
+    <div><span style="color:#888">📋 项目名称：</span><strong id="bidProjectName" style="color:#1a1a2e">--</strong></div>
+    <div><span style="color:#888">⏰ 截止时间：</span><strong id="bidProjectDeadline" style="color:#e74c3c">--</strong></div>
+  </div>
+</div>
+
+<div class="form-row" style="margin-bottom:16px">
+<div class="form-group"><label>供应商名称</label><input id="bidSupplierName" placeholder="请输入供应商名称"></div>
+<div class="form-group"><label>报价类目</label><select id="bidCategory" onchange="switchMaterialTable()"><option value="">-- 请选择 --</option><option value="被子件套">被子件套</option><option value="枕头抱枕">枕头抱枕</option><option value="服装">服装</option><option value="箱包">箱包</option><option value="办公椅">办公椅</option><option value="玩具">玩具</option><option value="纸品">纸品</option><option value="餐具水具锅具">餐具水具锅具</option><option value="电子产品">电子产品</option><option value="其他">其他</option></select></div>
+<div class="form-group"><label>报价有效期</label><input id="bidValidity" placeholder="如：30天"></div>
+</div>
+
+<div id="bidSpecsContainer">
+<div class="spec-block" data-spec-idx="0">
+<div style="margin-bottom:8px"><label style="font-size:13px;font-weight:600;color:#333">规格名称</label><input class="spec-name-input" placeholder="如：1.5米床 / 1.8米床" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:13px"></div>
+<h4 style="margin:0 0 8px;font-size:14px;color:#333">💰 费用拆分</h4>
+<div style="overflow-x:auto;margin-bottom:12px">
+<table style="width:100%"><thead><tr><th style="width:70%">费用项目</th><th style="width:30%">总金额 (¥)</th></tr></thead><tbody>
+<tr><td style="font-weight:600">材料费用（含主材辅材，包装等实物费用）</td><td><input class="spec-material-cost" type="text" readonly style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:13px;background:#f1f5f9;text-align:right" value="0"></td></tr>
+<tr><td style="font-weight:600">人工费用</td><td><input class="spec-labor" type="number" value="0" onchange="calcBidTotal()" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:13px;text-align:right"></td></tr>
+<tr><td style="font-weight:600">制造费用<small style="color:#999;font-weight:normal">（含房租，水电，机器折旧）</small></td><td><input class="spec-mfg" type="number" value="0" onchange="calcBidTotal()" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:13px;text-align:right"></td></tr>
+<tr><td style="font-weight:600">管理费用</td><td><input class="spec-admin" type="number" value="0" onchange="calcBidTotal()" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:13px;text-align:right"></td></tr>
+<tr><td style="font-weight:600">利润</td><td><input class="spec-profit" type="number" value="0" onchange="calcBidTotal()" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:13px;text-align:right"></td></tr>
+<tr><td style="font-weight:600">税金</td><td><input class="spec-tax" type="number" value="0" onchange="calcBidTotal()" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:13px;text-align:right"></td></tr>
+
+<tr style="background:#f0f7ff;font-weight:700"><td style="font-weight:600;color:#1a1a2e">💰 费用汇总</td><td style="text-align:right;color:#2563eb;font-size:15px" class="spec-cost-summary">¥0</td></tr></tbody></table>
+</div>
+<h4 style="margin:16px 0 8px;font-size:14px;color:#333">📦 物料明细</h4>
+<div style="overflow-x:auto;margin-bottom:8px">
+<table class="spec-items-table"><thead class="spec-items-head"></thead><tbody class="spec-items-body"></tbody></table>
+</div>
+<button class="btn btn-outline btn-sm" onclick="addBidItem(this)">+ 添加物料</button> <a href="#" onclick="downloadMaterialTemplate(event)" style="margin-left:12px;font-size:13px;color:#2563eb;text-decoration:underline;cursor:pointer">下载物料明细模板</a> <a href="#" onclick="uploadMaterialTemplate(event)" style="margin-left:8px;font-size:13px;color:#27ae60;text-decoration:underline;cursor:pointer">上传物料报价明细</a>
+</div>
+</div>
+<button class="btn btn-outline btn-sm" onclick="addNewSpec()" style="margin-bottom:16px;background:#2563eb;color:#fff;border:none;border-radius:6px;padding:6px 16px;cursor:pointer;font-size:13px">+ 新增规格</button>
+<h4 style="margin:16px 0 8px;font-size:14px;color:#333">📋 项目附件（可下载）</h4>
+<div id="bidProjectAttachments" style="margin-bottom:12px;font-size:12px;color:#999">加载中...</div>
+
+<h4 style="margin:16px 0 8px;font-size:14px;color:#333">📎 投标附件</h4>
+<div id="bidAttachmentList" style="margin-bottom:8px;font-size:12px;color:#999">未选择文件</div>
+<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
+  <input type="file" id="bidFileInput" multiple accept=".pdf,.zip,.rar,.dwg,.dxf,.doc,.docx,.xls,.xlsx,.jpg,.png" style="display:none" onchange="handleBidFiles(this.files)">
+  <button class="btn btn-outline btn-sm" onclick="document.getElementById('bidFileInput').click()">📁 选择文件</button>
+  <span style="font-size:11px;color:#999">支持 PDF/ZIP/RAR/CAD/Office 等，单文件≤50MB</span>
+</div>
+
+<div style="text-align:right;margin:16px 0;font-size:18px;font-weight:700;color:#2563eb">总报价：¥<span id="bidTotalDisplay">0</span></div>
+<div style="display:flex;gap:10px;justify-content:flex-end">
+<button class="btn btn-outline" onclick="closeModal('bidModal')">取消</button>
+<button class="btn btn-primary" onclick="submitBid()">提交报价</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Quote Detail Modal -->
+<div class="modal-overlay" id="quoteDetailModal">
+<div class="modal" style="width:90%;max-width:1100px;max-height:85vh;overflow-y:auto">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+<h3 id="qdTitle" style="margin:0">报价详情</h3>
+<button class="btn btn-outline" onclick="closeModal('quoteDetailModal')" style="font-size:20px;padding:0 12px">&times;</button>
+</div>
+<div id="qdContent"></div>
+<div style="margin-top:16px;text-align:right">
+<button class="btn btn-primary" onclick="exportProjectQuotes()">导出Excel</button>
+<button class="btn btn-outline" onclick="closeModal('quoteDetailModal')">关闭</button>
+</div>
+</div>
+</div>
+<!-- Create Project Modal -->
+<div class="modal-overlay" id="createProjectModal">
+<div class="modal" style="width:680px;max-height:85vh;overflow-y:auto">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h3 style="margin:0">发布新项目</h3><button class="btn btn-outline" onclick="closeModal('createProjectModal')" style="font-size:20px;padding:0 8px;line-height:1">&times;</button></div>
+<div class="form-group"><label>项目名称 <span style="color:#e74c3c">*</span></label><input id="cpName" placeholder="请输入项目名称"></div>
+<div class="form-group"><label>项目企划</label><div style="display:flex;gap:12px"><textarea id="cpPlan" placeholder="请输入项目企划说明..." style="flex:1;min-height:80px;border:1px solid #d1d5db;border-radius:6px;padding:10px;font-size:14px;resize:vertical;font-family:inherit"></textarea><div style="width:180px;flex-shrink:0;border:1px dashed #d1d5db;border-radius:6px;padding:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:#fafafa"><div style="font-size:12px;color:#666">📎 企划附件</div><input type="file" id="cpFileInput" multiple accept=".pdf,.zip,.rar,.dwg,.dxf" style="display:none" onchange="handleCpFiles(this.files)"><button class="btn btn-outline btn-sm" style="width:100%" onclick="document.getElementById('cpFileInput').click()">📁 选择文件</button><div id="cpAttachmentList" style="font-size:11px;color:#999;text-align:center;word-break:break-all">未选择文件</div><span style="font-size:10px;color:#aaa">PDF/ZIP/CAD ≤50MB</span></div></div></div>
+<div class="form-group"><label>渠道报量明细</label><div style="display:flex;gap:12px"><textarea id="cpChannel" placeholder="请输入渠道报量明细..." style="flex:1;min-height:80px;border:1px solid #d1d5db;border-radius:6px;padding:10px;font-size:14px;resize:vertical;font-family:inherit"></textarea><div style="width:180px;flex-shrink:0;border:1px dashed #d1d5db;border-radius:6px;padding:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:#fafafa"><div style="font-size:12px;color:#666">📎 渠道附件</div><input type="file" id="cpChannelFileInput" multiple accept=".pdf,.zip,.rar,.dwg,.dxf" style="display:none" onchange="handleCpChannelFiles(this.files)"><button class="btn btn-outline btn-sm" style="width:100%" onclick="document.getElementById('cpChannelFileInput').click()">📁 选择文件</button><div id="cpChannelAttachmentList" style="font-size:11px;color:#999;text-align:center;word-break:break-all">未选择文件</div><span style="font-size:10px;color:#aaa">PDF/ZIP/CAD ≤50MB</span></div></div></div>
+<div class="form-group"><label>项目技术参数</label><div style="display:flex;gap:12px"><textarea id="cpTechParams" placeholder="请输入项目技术参数..." style="flex:1;min-height:80px;border:1px solid #d1d5db;border-radius:6px;padding:10px;font-size:14px;resize:vertical;font-family:inherit"></textarea><div style="width:180px;flex-shrink:0;border:1px dashed #d1d5db;border-radius:6px;padding:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:#fafafa"><div style="font-size:12px;color:#666">📎 技术附件</div><input type="file" id="cpTechFileInput" multiple accept=".pdf,.zip,.rar,.dwg,.dxf" style="display:none" onchange="handleCpTechFiles(this.files)"><button class="btn btn-outline btn-sm" style="width:100%" onclick="document.getElementById('cpTechFileInput').click()">📁 选择文件</button><div id="cpTechAttachmentList" style="font-size:11px;color:#999;text-align:center;word-break:break-all">未选择文件</div><span style="font-size:10px;color:#aaa">PDF/ZIP/CAD ≤50MB</span></div></div></div>
+<div class="form-group"><label>截止日期</label><input id="cpDeadline" type="date"></div>  <div class="modal-actions">
+    <button class="btn btn-outline" onclick="closeModal('createProjectModal')">取消</button>
+    <button class="btn btn-primary" onclick="createProject()">确认发布</button>
+  </div>
+
+
+
+</div>
+<script>
+
+var API="http://localhost:3000";
+var roleMap={supplier:"供应商",buyer:"采购员",reviewer:"评审专家"};
+var params=new URLSearchParams(window.location.search);
+var USER={account:params.get("account")||sessionStorage.getItem("zrbac_user")||"",role:params.get("role")||sessionStorage.getItem("zrbac_role")||"supplier",name:params.get("name")||sessionStorage.getItem("zrbac_name")||""};
+var SUPPLIER_SCORES={"优质纺织供应商":{delivery:92,quality:88},"恒源纺织有限公司":{delivery:85,quality:90},"鑫达家纺有限公司":{delivery:95,quality:85},"华锦高端家纺":{delivery:88,quality:95}};
+
+var isBeddingMode=false;  // 被子件套模式开关sessionStorage.setItem("zrbac_user",USER.account);sessionStorage.setItem("zrbac_role",USER.role);sessionStorage.setItem("zrbac_name",USER.name);
+function $(id){return document.getElementById(id);}
+function toast(m,t){var e=document.createElement("div");e.className="toast "+(t||"success");e.textContent=m;document.body.appendChild(e);setTimeout(function(){e.remove();},3000);}
+
+function sq(id, name) {
+  return "showProjectQuotes('" + id + "','" + (name||"").replace(/'/g, "\\'") + "')";
+}
+function closeModal(id){$(id).classList.remove("show");if(id==="createProjectModal"){cpFiles=[];cpChannelFiles=[];cpTechFiles=[];}if(id==="bidModal"){bidFiles=[];}}async function closeProject(pid){if(!confirm("确定要截止该项目吗？截止后供应商将无法继续报价。"))return;var r=await api("/api/buyer/projects/"+pid+"/close",{method:"POST",body:{account:USER.account}});if(r.success){toast("项目已截止","success");loadBuyerProjects();}else{toast(r.message,"error");}}
+async function api(p,o){o=o||{};o.headers={"Content-Type":"application/json",...(o.headers||{})};if(o.body)o.body=JSON.stringify(o.body);var r=await fetch(API+p,o);return r.json();}
+function switchView(id){
+document.querySelectorAll(".sidebar .menu-item").forEach(function(m){m.classList.remove("active");});
+var mi=document.querySelector('.sidebar .menu-item[data-view="'+id+'"]');if(mi)mi.classList.add("active");
+document.querySelectorAll(".view").forEach(function(v){v.classList.remove("active");v.style.display="none";});
+var t=document.getElementById("view-"+id);if(t){t.classList.add("active");t.style.display="block";}
+if(id==="supplier-projects")loadSupplierProjects();
+if(id==="buyer-projects")loadBuyerProjects();
+if(id==="buyer-quotes")loadBuyerProjectSelect();
+if(id==="buyer-compare")loadBuyerCompareSelect();
+if(id==="reviewer-projects")loadReviewerProjects();
+if(id==="admin-approval")loadAdminApproval();
+
+if(id==="supplier-history")loadSupplierHistory();
+}
+
+
+document.addEventListener("click", function(e){
+  var t = e.target.closest('[data-action="show-quotes"]');
+  if (t) {
+    showProjectQuotes(t.getAttribute("data-pid"), t.getAttribute("data-pname"));
+  }
+});
+
+document.addEventListener("click",function(e){
+var t=e.target.closest("[data-action]");if(!t)return;
+var a=t.getAttribute("data-action");
+if(a==="alert"){alert(t.getAttribute("data-msg")||"");}
+if(a==="supplier-bid"||a==="open-bid"){openSupplierBid(t.getAttribute("data-pid")||"",t.getAttribute("data-bid")||"");}
+if(a==="edit-bid"){editSupplierBid(t.getAttribute("data-bid")||"",t.getAttribute("data-pid")||"");}
+if(a==="close-project"){closeProject(t.getAttribute("data-pid")||"");}});
+
+function buildSidebar(){
+var sb=document.getElementById("sidebar");
+if(!sb){console.error("Sidebar not found");return;}
+if(USER.role==="supplier"){
+sb.innerHTML='<div class="menu-group">供应商工作台</div><div class="menu-item active" data-view="supplier-projects"><span>📋</span> 采购项目</div><div class="menu-divider"></div><div class="menu-group">历史记录</div><div class="menu-item" data-view="supplier-history"><span>📄</span> 我的报价记录</div>';
+}else if(USER.role==="buyer"){
+sb.innerHTML='<div class="menu-group">采购员工作台</div><div class="menu-item active" data-view="buyer-projects"><span>📋</span> 采购项目</div><div class="menu-item" data-view="buyer-quotes"><span>📨</span> 供应商报价</div><div class="menu-item" data-view="buyer-compare"><span>📊</span> 询比价结果</div>';
+}else if(USER.role==="admin"){sb.innerHTML='<div class="menu-group">管理员工作台</div><div class="menu-item active" data-view="admin-approval"><span>👥</span> 用户审批</div>';}else if(USER.role==="reviewer"){
+sb.innerHTML='<div class="menu-group">评审专家工作台</div><div class="menu-item active" data-view="reviewer-projects"><span>📋</span> 采购项目</div>';
+}
+sb.querySelectorAll(".menu-item[data-view]").forEach(function(it){it.addEventListener("click",function(){switchView(this.getAttribute("data-view"));});});
+}
+
+
+async function loadAdminApproval(){
+  try {
+    var r = await api("/api/admin/pending-users?account=" + encodeURIComponent(USER.account));
+    var pending = r.data || [];
+    document.getElementById("aStatPending").textContent = pending.length;
+    
+    // Get all users for stats
+    try {
+      var ur = await api("/api/admin/users");
+      var allUsers = ur.data || [];
+      document.getElementById("aStatApproved").textContent = allUsers.filter(function(u){return u.status==="active"||!u.status;}).length;
+      document.getElementById("aStatRejected").textContent = allUsers.filter(function(u){return u.status==="rejected";}).length;
+    } catch(e) {}
+    
+    if (pending.length === 0) {
+      document.getElementById("aTableContainer").innerHTML = '<div class="empty">暂无待审批用户</div>';
+      return;
+    }
+    
+    var rows = pending.map(function(u){
+      return '<tr><td>' + u.account + '</td><td><span class="role-tag">' + u.role + '</span></td><td>' + new Date(u.created_at).toLocaleString() + '</td><td><button class="btn btn-primary btn-sm" onclick="approveUser(\x27' + u.account + '\x27,\x27active\x27)">✔ 通过</button> <button class="btn btn-danger btn-sm" onclick="approveUser(\x27' + u.account + '\x27,\x27rejected\x27)">✖ 拒绝</button></td></tr>';
+    }).join("");
+    
+    document.getElementById("aTableContainer").innerHTML = '<table><thead><tr><th>账号</th><th>角色</th><th>注册时间</th><th>操作</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  } catch(e) {
+    document.getElementById("aTableContainer").innerHTML = '<div class="empty">加载失败: ' + e.message + '</div>';
+  }
+}
+
+async function approveUser(account, action){
+  if (!confirm('确认对 ' + account + ' 执行 ' + (action==='active'?'审批通过':'审批拒绝') + ' ？')) return;
+  try {
+    var r = await api("/api/admin/approve-user", {
+      method: "POST",
+      body: { adminAccount: USER.account, targetAccount: account, action: action }
+    });
+    if (r.success) {
+      alert('审批完成');
+      loadAdminApproval();
+    } else {
+      alert('审批失败: ' + (r.message || ''));
+    }
+  } catch(e) {
+    alert('审批失败: ' + e.message);
+  }
+}
+
+function doLogout(){sessionStorage.clear();window.location.href="login.html";}
+
+async function loadSupplierProjects(){
+var myBidIds={};
+try{var mbRes=await api("/api/supplier/bids?account="+encodeURIComponent(USER.account));
+(mbRes.data||[]).forEach(function(b){myBidIds[b.projectId]=b.id;});
+}catch(e){}
+var kw=(document.getElementById("sSearch")&&document.getElementById("sSearch").value||"").toLowerCase();
+var st=(document.getElementById("sFilter")&&document.getElementById("sFilter").value||"");
+try{
+var r=await api("/api/reviewer/projects");
+var data=(r.data||[]).filter(function(p){return (!kw||p.projectName.toLowerCase().includes(kw))&&(!st||p.status===st);});
+if(data.length===0){document.getElementById("sTableContainer").innerHTML='<div class="empty">暂无项目</div>';return;}
+var rows=data.map(function(p){
+var sc=p.status==="open"?"open":"closed";
+var sts=p.status==="open"?"进行中":"已截止";
+var hasBid=myBidIds[p.id];
+var actionBtn=p.status==="open"?(hasBid?'<button class="btn btn-primary btn-sm" data-action="open-bid" data-pid="'+p.id+'" data-bid="'+myBidIds[p.id]+'">修改报价</button>':'<button class="btn btn-primary btn-sm" data-action="open-bid" data-pid="'+p.id+'">立即报价</button>'):'<span style="color:#999;font-size:12px">已截止</span>';
+return '<tr><td>'+p.id+'</td><td><strong>'+p.projectName+'</strong></td><td>'+(p.buyerName||p.buyer)+'</td><td>'+p.deadline+'</td><td><span class="status '+sc+'">'+sts+'</span></td><td>'+actionBtn+'</td></tr>';
+}).join("");
+document.getElementById("sTableContainer").innerHTML='<table><thead><tr><th>编号</th><th>项目名称</th><th>采购单位</th><th>截止日期</th><th>状态</th><th>操作</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}catch(e){document.getElementById("sTableContainer").innerHTML='<div class="empty">加载失败</div>';}
+}
+
+async function loadSupplierHistory(){
+var kw=(document.getElementById("shSearch")&&document.getElementById("shSearch").value||"").toLowerCase();
+try{
+var r=await api("/api/supplier/bids?account="+encodeURIComponent(USER.account));
+var data=(r.data||[]).filter(function(b){return !kw||(b.projectName||"").toLowerCase().includes(kw);});
+if(data.length===0){document.getElementById("shTableContainer").innerHTML='<div class="empty">暂无报价记录</div>';return;}
+var rows=data.map(function(b){
+return '<tr><td>'+b.id+'</td><td>'+b.projectName+'</td><td>&yen;'+(b.total||0).toLocaleString()+'</td><td>'+(b.category||"--")+'</td><td>'+(b.items?b.items.length:0)+' 项</td><td>'+(b.specs?b.specs.length:0)+' 规格</td><td>'+new Date(b.submittedAt||b.createdAt).toLocaleString()+'</td><td>'+(b.projectStatus==="open"?'<button class="btn btn-primary btn-sm" data-action="edit-bid" data-bid="'+b.id+'" data-pid="'+b.projectId+'">修改报价</button>':'<span style="color:#999">已截止</span>')+'</td></tr>';
+}).join("");
+document.getElementById("shTableContainer").innerHTML='<table><thead><tr><th>报价单号</th><th>项目</th><th>总价</th><th>类目</th><th>物料数</th><th>规格数</th><th>提交时间</th><th>操作</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}catch(e){document.getElementById('shTableContainer').innerHTML='<div class="empty">加载失败</div>';}
+}
+
+// (Removed old openSupplierBid/editSupplierBid; now using inline modal via openBidForm)
+
+async function loadBuyerProjects(){
+try{
+var r=await api("/api/buyer/projects?account="+encodeURIComponent(USER.account));
+var data=r.data||[];
+if(data.length===0){document.getElementById("bTableContainer").innerHTML='<div class="empty">暂无项目，点击上方按钮发布新项目</div>';return;}
+var rows=data.map(function(p){
+var sc=p.status==="open"?"open":"closed";
+var sts=p.status==="open"?"进行中":"已截止";
+var qc=p.quoteCount||0;
+var escName=p.projectName.replace(/'/g,"\\'");var quoteBtn=qc>0?'<button class="btn btn-primary btn-sm" data-action="show-quotes" data-pid="'+p.id+'" data-pname="'+escName+'">查看报价('+qc+')</button> ':'<span style="color:#999;font-size:12px">无报价</span> ';
+var closeBtn=p.status==="open"?'<button class="btn btn-danger btn-sm" data-action="close-project" data-pid="'+p.id+'">截止</button>':'<span style="color:#999;font-size:12px">已截止</span>';return '<tr><td>'+p.id+'</td><td><strong style="cursor:pointer;color:#2563eb;text-decoration:underline" data-action="show-quotes" data-pid="'+p.id+'" data-pname="'+escName+'">'+p.projectName+'</strong></td><td>'+p.deadline+'</td><td><span class="status '+sc+'">'+sts+'</span></td><td>'+qc+'</td><td>'+quoteBtn+closeBtn+'</td></tr>';
+}).join("");
+document.getElementById("bTableContainer").innerHTML='<table><thead><tr><th>编号</th><th>项目名称</th><th>截止</th><th>状态</th><th>报价数</th><th>操作</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}catch(e){document.getElementById("bTableContainer").innerHTML='<div class="empty">加载失败</div>';}
+}
+
+async function loadBuyerProjectSelect(){
+var r=await api("/api/buyer/projects?account="+encodeURIComponent(USER.account));
+var data=r.data||[];
+var o=data.map(function(p){return '<option value="'+p.id+'">'+p.projectName+' ('+p.id+')</option>';}).join("");
+document.getElementById("bqProjectSelect").innerHTML='<option value="">-- 选择项目 --</option>'+o;
+document.getElementById("bcProjectSelect").innerHTML='<option value="">-- 选择项目 --</option>'+o;
+}
+
+async function loadBuyerQuotes(){
+var pid=document.getElementById("bqProjectSelect").value;if(!pid)return;
+var r=await api("/api/buyer/quotes/"+pid+"?account="+encodeURIComponent(USER.account));
+if(!r.success)return toast(r.message,"error");
+var d2=r.data||[];
+if(d2.length===0){document.getElementById("bqTableContainer").innerHTML='<div class="empty">暂无供应商报价</div>';return;}
+document.getElementById("bqTableContainer").innerHTML='<table><thead><tr><th>供应商</th><th>物料数</th><th>总报价</th><th>时间</th></tr></thead><tbody>'+d2.map(function(q){return '<tr><td><strong>'+q.supplierName+'</strong></td><td>'+q.items.length+'</td><td>&yen;'+(q.total||0).toLocaleString()+'</td><td>'+new Date(q.submittedAt||q.createdAt).toLocaleString()+'</td></tr>';}).join("")+'</tbody></table>';
+}
+
+async function loadBuyerCompareSelect(){
+var r=await api("/api/buyer/projects?account="+encodeURIComponent(USER.account));
+var data=r.data||[];
+var o=data.map(function(p){return '<option value="'+p.id+'">'+p.projectName+' ('+p.id+')</option>';}).join("");
+document.getElementById("bcProjectSelect").innerHTML='<option value="">-- 选择项目 --</option>'+o;
+}
+
+async function loadBuyerCompare(){
+var pid=document.getElementById("bcProjectSelect").value;if(!pid)return;
+var r=await api("/api/buyer/quotes/"+pid+"?account="+encodeURIComponent(USER.account));
+if(!r.success)return toast(r.message,"error");
+currentQuoteData=r.data||[];
+// 防御性解析：确保 items/specs 为数组
+currentQuoteData.forEach(function(q){
+if(typeof q.items==="string"){try{q.items=JSON.parse(q.items);}catch(e){q.items=[];}}
+if(!Array.isArray(q.items))q.items=[];
+if(typeof q.specs==="string"){try{q.specs=JSON.parse(q.specs);}catch(e){q.specs=[];}}
+if(!Array.isArray(q.specs))q.specs=[];
+});
+if(currentQuoteData.length===0){document.getElementById("bcTableContainer").innerHTML='<div class="empty">暂无报价数据</div>';return;}
+var hasBeddingCols=currentQuoteData.some(function(q){return q.items.some(function(it){return it.partName!==undefined||it.materialCode!==undefined||it.weight!==undefined||it.netUsage!==undefined||it.loss!==undefined;});});
+if(hasBeddingCols){
+var hc='<th>部件名称</th><th>物料名称</th><th>牌号</th><th>实际用量</th><th>单价</th><th>含税金额</th><th>小计</th><th>供应商</th>';
+var allItems=[];
+currentQuoteData.forEach(function(q){q.items.forEach(function(it){allItems.push({supplier:q.supplierName,partName:it.partName||'',materialName:it.materialName||'',materialCode:it.materialCode||'',actualUsage:((Number(it.netUsage)||0)*(1+(Number(it.loss)||0)/100)),unitPrice:it.unitPrice||0,subtotal:it.subtotal||0});});});
+var allSubtotals=allItems.map(function(it){return it.subtotal||0;});
+var minSubtotal=Math.min.apply(null,allSubtotals.filter(function(p){return p>0;}));
+var br=allItems.map(function(it){var isMin=it.subtotal===minSubtotal&&it.subtotal>0;var bg=isMin?'background:#C6EFCE;color:#006100;font-weight:600':'';return '<tr><td style="'+bg+'">'+it.partName+'</td><td style="'+bg+'">'+it.materialName+'</td><td style="'+bg+'">'+it.materialCode+'</td><td style="'+bg+'">'+it.actualUsage.toFixed(2)+'</td><td style="'+bg+'">¥'+it.unitPrice.toLocaleString()+'</td><td style="'+bg+'">¥'+it.subtotal.toLocaleString()+'</td><td style="'+bg+'">¥'+it.subtotal.toLocaleString()+'</td><td style="'+bg+'">'+it.supplier+'</td></tr>';}).join("");
+document.getElementById("bcTableContainer").innerHTML='<table><thead><tr>'+hc+'</tr></thead><tbody>'+br+'</tbody></table>';
+}else{
+var mats=[];var ms={};
+currentQuoteData.forEach(function(q){q.items.forEach(function(it){var n=it.materialName||it.name||"";if(n&&!ms[n]){ms[n]=true;mats.push(n);}});});
+var hc2='<th>物料名称</th><th>规格</th>';currentQuoteData.forEach(function(q){hc2+='<th>'+q.supplierName+'</th>';});
+var br2=mats.map(function(mat){var row='<tr><td>'+mat+'</td><td>--</td>';currentQuoteData.forEach(function(q){var found=q.items.find(function(it){return (it.materialName||it.name)===mat;});row+='<td>'+(found?'¥'+(found.unitPrice||0).toLocaleString()+'/¥'+(found.subtotal||(found.quantity*found.unitPrice)||0).toLocaleString():"--")+'</td>';});row+='</tr>';return row;}).join("");
+document.getElementById("bcTableContainer").innerHTML='<table><thead><tr>'+hc2+'</tr></thead><tbody>'+br2+'</tbody></table>';
+}
+}
+
+async function exportCompare(){
+var pid=document.getElementById("bcProjectSelect").value;if(!pid)return toast("请先选择项目","error");
+window.open("http://localhost:3000/api/buyer/export/"+pid,"_blank");
+}
+
+async function loadReviewerProjects(){
+try{var r=await api("/api/reviewer/projects");var data=r.data||[];
+document.getElementById("rStatTotal").textContent=data.length;
+document.getElementById("rStatOpen").textContent=data.filter(function(p){return p.status==="open";}).length;
+document.getElementById("rStatBids").textContent=data.filter(function(p){return p.quoteCount>0;}).length;
+document.getElementById("rStatWon").textContent=data.filter(function(p){return p.status==="closed";}).length;
+if(data.length===0){document.getElementById("rTableContainer").innerHTML='<div class="empty">暂无项目</div>';return;}
+var rows=data.map(function(p){
+var sc=p.status==="open"?"open":"closed";
+var sts=p.status==="open"?"进行中":"已截止";
+var winCol=p.status==="open"?"--":"<strong style=\"color:#27ae60\">"+p.winningSupplier+"</strong>";
+var escName=p.projectName.replace(/'/g,"\\'");return '<tr><td>'+p.id+'</td><td><strong style="cursor:pointer;color:#2563eb;text-decoration:underline" data-action="show-quotes" data-pid="'+p.id+'" data-pname="'+escName+'">'+p.projectName+'</strong></td><td>'+p.buyer+'</td><td>&yen;'+(p.budget||"--")+'</td><td><span class="status '+sc+'">'+sts+'</span></td><td>'+(p.quoteCount||0)+'</td><td class="text-green">'+(p.lowestBid?"&yen;"+p.lowestBid.toLocaleString():"--")+'</td><td>'+winCol+'</td></tr>';
+}).join("");
+document.getElementById("rTableContainer").innerHTML='<table><thead><tr><th>编号</th><th>项目名称</th><th>采购员</th><th>预算</th><th>状态</th><th>报价数</th><th>最低报价</th><th>中标方</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}catch(e){document.getElementById("rTableContainer").innerHTML='<div class="empty">加载失败</div>';}
+}
+
+var currentQuoteData=[];
+var currentQuoteProjectId="";
+
+async function showProjectQuotes(projectId,projectName){
+currentQuoteProjectId=projectId;
+document.getElementById("qdTitle").textContent="报价详情 - "+projectName+" ("+projectId+")";
+document.getElementById("qdContent").innerHTML='<div class="empty">加载中...</div>';
+document.getElementById("quoteDetailModal").classList.add("show");
+var r=await api("/api/buyer/quotes/"+projectId+"?account="+encodeURIComponent(USER.account));
+if(!r.success){document.getElementById("qdContent").innerHTML='<div class="empty">'+r.message+'</div>';return;}
+currentQuoteData=r.data||[];
+if(currentQuoteData.length===0){document.getElementById("qdContent").innerHTML='<div class="empty">暂无供应商报价</div>';return;}
+var projInfo=r.project||{};
+var supplierList=currentQuoteData.map(function(q){return q.supplierName;}).join(" / ");
+var projHeader='<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin-bottom:16px">';
+projHeader+='<h4 style="margin:0 0 10px 0;color:#1a1a2e;font-size:15px">📋 项目信息：'+projInfo.projectName+' ('+projInfo.id+')</h4>';
+projHeader+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px 20px;font-size:13px;color:#555">';
+projHeader+='<div><span style="color:#999">采购单位：</span>'+(projInfo.buyerName||projInfo.buyer)+'</div>';
+projHeader+='<div><span style="color:#999">预算：</span>&yen;'+(Number(projInfo.budget)||0).toLocaleString()+'</div>';
+projHeader+='<div><span style="color:#999">截止日期：</span>'+projInfo.deadline+'</div>';
+projHeader+='<div><span style="color:#999">状态：</span><span style="color:'+(projInfo.status==="open"?"#27ae60":"#999")+'">'+(projInfo.status==="open"?"进行中":"已截止")+'</span></div>';
+projHeader+='<div><span style="color:#999">投标供应商数：</span>'+currentQuoteData.length+' 家</div>';
+projHeader+='<div><span style="color:#999">供应商：</span><strong>'+supplierList+'</strong></div>';
+projHeader+='</div></div>';
+
+if(USER.role==="reviewer"){
+var supplierAvg={};
+var allRows=[];
+currentQuoteData.forEach(function(q){
+var specs=q.specs||[];
+var supplierName=q.supplierName;
+if(!supplierAvg[supplierName])supplierAvg[supplierName]={totalComposite:0,totalPrice:0,totalDelivery:0,totalQuality:0,totalSpecs:0};
+if(specs.length===0){
+var ct=(q.laborCost||0)+(q.manufacturingCost||0)+(q.adminCost||0)+(q.profit||0)+(q.tax||0)+q.items.reduce(function(s,it){return s+(Number(it.subtotal)||Number(it.quantity)*Number(it.unitPrice)||0);},0);
+var ss=SUPPLIER_SCORES[q.supplierName]||{delivery:80,quality:80};
+supplierAvg[supplierName].totalSpecs+=1;
+supplierAvg[supplierName].totalDelivery+=ss.delivery;
+supplierAvg[supplierName].totalQuality+=ss.quality;
+allRows.push({supplier:supplierName,specName:"--",bidTotal:ct,priceScore:0,deliveryScore:ss.delivery,qualityScore:ss.quality});
+}else{
+specs.forEach(function(sp){
+var specTotal=(sp.laborCost||0)+(sp.manufacturingCost||0)+(sp.adminCost||0)+(sp.profit||0)+(sp.tax||0)+(sp.items||[]).reduce(function(s,it){return s+(Number(it.subtotal)||Number(it.quantity)*Number(it.unitPrice)||0);},0);
+var allSpecTotals=[];
+currentQuoteData.forEach(function(qq){(qq.specs||[]).forEach(function(ssp){if(ssp.name===sp.name||(!sp.name&&!ssp.name)){var st=(ssp.laborCost||0)+(ssp.manufacturingCost||0)+(ssp.adminCost||0)+(ssp.profit||0)+(ssp.tax||0)+(ssp.items||[]).reduce(function(s,it){return s+(Number(it.subtotal)||Number(it.quantity)*Number(it.unitPrice)||0);},0);if(st>0)allSpecTotals.push(st);}});});
+var minSpecTotal=Math.min.apply(null,allSpecTotals);
+var priceScore=minSpecTotal>0?Math.round((minSpecTotal/specTotal)*10000)/100:0;
+var ss2=SUPPLIER_SCORES[q.supplierName]||{delivery:80,quality:80};
+var deliveryScore=ss2.delivery||80;
+var qualityScore=ss2.quality||80;
+var composite=Math.round((priceScore*0.5+deliveryScore*0.25+qualityScore*0.25)*100)/100;
+supplierAvg[supplierName].totalSpecs+=1;
+supplierAvg[supplierName].totalPrice+=priceScore;
+supplierAvg[supplierName].totalDelivery+=deliveryScore;
+supplierAvg[supplierName].totalQuality+=qualityScore;
+supplierAvg[supplierName].totalComposite+=composite;
+allRows.push({supplier:supplierName,specName:sp.name||"--",bidTotal:specTotal,priceScore:priceScore,deliveryScore:deliveryScore,qualityScore:qualityScore});
+});
+}
+});
+// Calculate averages
+var supplierAvgFinal={};
+Object.keys(supplierAvg).forEach(function(name){
+var s=supplierAvg[name];
+var n=s.totalSpecs||1;
+supplierAvgFinal[name]=Math.round(s.totalComposite/n*10)/10;
+});
+// Sort by average composite descending
+allRows.sort(function(a,b){
+var ca=supplierAvgFinal[a.supplier]||0;
+var cb=supplierAvgFinal[b.supplier]||0;
+return cb-ca;
+});
+// Group rows by supplier for rowspan
+var grouped=[];
+var currentSupplier=null;
+var currentGroup=null;
+allRows.forEach(function(r){
+if(r.supplier!==currentSupplier){
+currentGroup={supplier:r.supplier,avgComposite:supplierAvgFinal[r.supplier]||0,rows:[]};
+grouped.push(currentGroup);
+currentSupplier=r.supplier;
+}
+currentGroup.rows.push(r);
+});
+var bestAvg=grouped.length>0?grouped[0].avgComposite:0;
+var scHTML='<div style="overflow-x:auto;margin-bottom:16px"><h4 style="margin-bottom:8px;color:#333">\u{1F4CA} \u9879\u76EE\u62A5\u4EF7\u8BC4\u5206\u8868</h4><table style="width:100%;font-size:13px"><thead><tr style="background:#e8f0fe"><th>\u89C4\u683C\u540D\u79F0</th><th>\u4F9B\u5E94\u5546</th><th>\u62A5\u4EF7\u603B\u989D</th><th style="color:#e74c3c">\u4EF7\u683C\u5F97\u5206(50%)</th><th style="color:#2c5364">\u4EA4\u4ED8\u5F97\u5206(25%)</th><th style="color:#27ae60">\u54C1\u8D28\u5F97\u5206(25%)</th><th>\u7EFC\u5408\u5F97\u5206(100%)</th></tr></thead><tbody>';
+grouped.forEach(function(g){
+var isBest=g.avgComposite===bestAvg&&bestAvg>0;
+var bg=isBest?' style="background:#C6EFCE"':'';
+var icon=isBest?'\u{1F3C6} ':'';
+g.rows.forEach(function(r,idx){
+scHTML+='<tr'+bg+'><td>'+r.specName+'</td><td><strong>'+icon+r.supplier+'</strong></td><td>&yen;'+r.bidTotal.toLocaleString()+'</td><td style="color:#e74c3c;font-weight:600">'+r.priceScore.toFixed(1)+'</td><td style="color:#2c5364;font-weight:600">'+r.deliveryScore.toFixed(1)+'</td><td style="color:#27ae60;font-weight:600">'+r.qualityScore.toFixed(1)+'</td>';
+if(idx===0){
+scHTML+='<td rowspan="'+g.rows.length+'" style="vertical-align:middle;text-align:center;font-weight:700;font-size:16px;color:#2563eb">'+g.avgComposite.toFixed(1)+'</td>';
+}
+scHTML+='</tr>';
+});
+});
+scHTML+='</tbody></table></div>';
+
+// 串标检测
+if(r.collusionWarnings&&r.collusionWarnings.length>0){
+var warnHtml='<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:12px 16px;margin-bottom:16px"><strong style="color:#856404">' + '串标风险提示' + '</strong><ul style="margin:8px 0 0 16px;color:#856404;font-size:13px">';
+r.collusionWarnings.forEach(function(w){warnHtml+='<li>'+w.detail+'</li>';});
+warnHtml+='</ul></div>';
+projHeader=warnHtml+projHeader;
+}
+document.getElementById("qdContent").innerHTML=projHeader+scHTML;
+}else{
+var hasBeddingCols=currentQuoteData.some(function(q){return q.items.some(function(it){return it.partName!==undefined||it.materialCode!==undefined||it.weight!==undefined||it.netUsage!==undefined||it.loss!==undefined;});});
+var hc='';var br='';var sr='';
+if(hasBeddingCols){
+hc='<th>部件名称</th><th>物料名称</th><th>牌号</th><th>实际用量</th><th>单价</th><th>含税金额</th><th>小计</th><th>供应商</th>';
+var allItems=[];
+currentQuoteData.forEach(function(q){q.items.forEach(function(it){allItems.push({supplier:q.supplierName,partName:it.partName||'',materialName:it.materialName||'',materialCode:it.materialCode||'',actualUsage:((Number(it.netUsage)||0)*(1+(Number(it.loss)||0)/100)),unitPrice:it.unitPrice||0,subtotal:it.subtotal||0});});});
+var allSubtotals=allItems.map(function(it){return it.subtotal||0;});
+var minSubtotal=Math.min.apply(null,allSubtotals.filter(function(p){return p>0;}));
+allItems.forEach(function(it){var isMin=it.subtotal===minSubtotal&&it.subtotal>0;var bg=isMin?'background:#C6EFCE;color:#006100;font-weight:600':'';br+='<tr><td style="'+bg+'">'+it.partName+'</td><td style="'+bg+'">'+it.materialName+'</td><td style="'+bg+'">'+it.materialCode+'</td><td style="'+bg+'">'+it.actualUsage.toFixed(2)+'</td><td style="'+bg+'">¥'+it.unitPrice.toLocaleString()+'</td><td style="'+bg+'">¥'+it.subtotal.toLocaleString()+'</td><td style="'+bg+'">¥'+it.subtotal.toLocaleString()+'</td><td style="'+bg+'">'+it.supplier+'</td></tr>';});
+}else{
+var mats=[];var ms={};
+currentQuoteData.forEach(function(q){q.items.forEach(function(it){var n=it.materialName||it.name||"";if(n&&!ms[n]){ms[n]=true;mats.push(n);}});});
+hc='<th>物料名称</th><th>规格</th>';currentQuoteData.forEach(function(q){hc+='<th>'+q.supplierName+'</th>';});
+mats.forEach(function(mat){var row='<tr><td>'+mat+'</td><td>--</td>';currentQuoteData.forEach(function(q){var found=q.items.find(function(it){return (it.materialName||it.name)===mat;});row+='<td>'+(found?'¥'+(found.unitPrice||0).toLocaleString()+" / ¥"+(found.subtotal||(found.quantity*found.unitPrice)||0).toLocaleString():"--")+'</td>';});row+='</tr>';br+=row;});
+}
+
+// Cost breakdown comparison table (horizontal)
+var costHTML="";
+if(currentQuoteData.length>0){
+  // Calculate matCost for each supplier
+  currentQuoteData.forEach(function(q){
+    q._matCost=q.items.reduce(function(s,it){return s+(it.subtotal||Number(it.quantity)*Number(it.unitPrice)||0);},0);
+    q._total=q._matCost+(q.laborCost||0)+(q.manufacturingCost||0)+(q.adminCost||0)+(q.profit||0)+(q.tax||0);
+  });
+  // Build comparison table
+  costHTML+="<div style=\x27background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:14px 18px;margin-bottom:12px;overflow-x:auto\x27>";
+  costHTML+="<h4 style=\x27margin:0 0 10px 0;font-size:14px;color:#1a1a2e\x27>📊 费用拆分横向对比</h4>";
+  costHTML+="<table style=\x27width:100%;font-size:12px;border-collapse:collapse\x27><thead><tr style=\x27background:#f8fafc\x27><th style=\x27text-align:left;padding:6px 10px\x27>费用项目</th>";
+  currentQuoteData.forEach(function(q){costHTML+="<th style=\x27text-align:right;padding:6px 10px\x27>"+q.supplierName+"</th>";});
+  costHTML+="</tr></thead><tbody>";
+  // Row helper
+  function addRow(label, key){
+    var vals=currentQuoteData.map(function(q){return (key==="_matCost"?q._matCost:Number(q[key])||0);});
+    var minVal=Math.min.apply(null,vals);
+    costHTML+="<tr><td style=\x27padding:6px 10px;font-weight:600\x27>"+label+"</td>";
+    currentQuoteData.forEach(function(q){
+      var v=(key==="_matCost"?q._matCost:Number(q[key])||0);
+      var isMin=v===minVal&&v>0;
+      var bg=isMin?"background:#C6EFCE;color:#006100;font-weight:600":"";
+      costHTML+="<td style=\x27text-align:right;padding:6px 10px;"+bg+"\x27>"+v.toLocaleString()+"</td>";
+    });
+    costHTML+="</tr>";
+  }
+  addRow("材料费用","_matCost");
+  addRow("人工费用","laborCost");
+  addRow("制造费用","manufacturingCost");
+  addRow("管理费用","adminCost");
+  addRow("利润","profit");
+  addRow("税金","tax");
+  // Summary row
+  var totals=currentQuoteData.map(function(q){return q._total;});
+  var minTotal=Math.min.apply(null,totals);
+  costHTML+="<tr style=\x27background:#f0f7ff;font-weight:700\x27><td style=\x27padding:6px 10px;color:#1a1a2e\x27>💰 费用汇总</td>";
+  currentQuoteData.forEach(function(q){
+    var isMin=q._total===minTotal&&q._total>0;
+    var bg=isMin?"background:#C6EFCE;color:#006100;font-weight:700":"";
+    costHTML+="<td style=\x27text-align:right;padding:6px 10px;color:#2563eb;"+bg+"\x27>"+q._total.toLocaleString()+"</td>";
+  });
+  costHTML+="</tr>";
+var specHTML="";
+var allSpecNames=[];
+currentQuoteData.forEach(function(q){
+  var specs=q.specs||[];
+  specs.forEach(function(sp){
+    var name=sp.name||"默认规格";
+    if(allSpecNames.indexOf(name)<0)allSpecNames.push(name);
+  });
+});
+if(allSpecNames.length>0){
+  allSpecNames.forEach(function(specName){
+    specHTML+='<div style="overflow-x:auto;margin-bottom:16px;border:1px solid #e2e8f0;border-radius:8px;padding:12px"><h4 style="margin-bottom:8px;color:#1a1a2e">📦 规格: '+specName+'</h4>';
+    specHTML+='<table style="width:100%;font-size:13px;margin-bottom:10px"><thead><tr style="background:#f1f5f9"><th>供应商</th><th>材料费</th><th>人工</th><th>制造</th><th>管理</th><th>利润</th><th>税金</th><th style="color:#2563eb">合计</th></tr></thead><tbody>';
+    var specRows=[];
+    currentQuoteData.forEach(function(q){
+      var specs=q.specs||[];
+      var sp=null;
+      for(var i=0;i<specs.length;i++){
+        if((specs[i].name||"默认规格")===specName){sp=specs[i];break;}
+      }
+      if(sp){
+        var mCost=(sp.items||[]).reduce(function(s,it){return s+(Number(it.subtotal)||Number(it.quantity)*Number(it.unitPrice)||0);},0);
+        var st=mCost+(sp.laborCost||0)+(sp.manufacturingCost||0)+(sp.adminCost||0)+(sp.profit||0)+(sp.tax||0);
+        specRows.push({name:q.supplierName,mCost:mCost,labor:sp.laborCost||0,mfg:sp.manufacturingCost||0,admin:sp.adminCost||0,profit:sp.profit||0,tax:sp.tax||0,total:st});
+      }
+    });
+    if(specRows.length>0){
+      var minMCost=Math.min.apply(null,specRows.map(function(r){return r.mCost;}));
+      var minLabor=Math.min.apply(null,specRows.map(function(r){return r.labor;}));
+      var minMfg=Math.min.apply(null,specRows.map(function(r){return r.mfg;}));
+      var minAdmin=Math.min.apply(null,specRows.map(function(r){return r.admin;}));
+      var minProfit=Math.min.apply(null,specRows.map(function(r){return r.profit;}));
+      var minTax=Math.min.apply(null,specRows.map(function(r){return r.tax;}));
+      var minTotal=Math.min.apply(null,specRows.map(function(r){return r.total;}));
+      specRows.forEach(function(r){
+        var mc=r.mCost===minMCost?'background:#C6EFCE;color:#006100;font-weight:600':'';
+        var lc=r.labor===minLabor?'background:#C6EFCE;color:#006100;font-weight:600':'';
+        var fc=r.mfg===minMfg?'background:#C6EFCE;color:#006100;font-weight:600':'';
+        var ac=r.admin===minAdmin?'background:#C6EFCE;color:#006100;font-weight:600':'';
+        var pc=r.profit===minProfit?'background:#C6EFCE;color:#006100;font-weight:600':'';
+        var tc=r.tax===minTax?'background:#C6EFCE;color:#006100;font-weight:600':'';
+        var gc=r.total===minTotal?'background:#C6EFCE;color:#006100;font-weight:600':'';
+        specHTML+='<tr><td><strong>'+r.name+'</strong></td><td style="text-align:right;'+mc+'">'+r.mCost.toLocaleString()+'</td><td style="text-align:right;'+lc+'">'+r.labor.toLocaleString()+'</td><td style="text-align:right;'+fc+'">'+r.mfg.toLocaleString()+'</td><td style="text-align:right;'+ac+'">'+r.admin.toLocaleString()+'</td><td style="text-align:right;'+pc+'">'+r.profit.toLocaleString()+'</td><td style="text-align:right;'+tc+'">'+r.tax.toLocaleString()+'</td><td style="text-align:right;color:#2563eb;font-weight:600;'+gc+'">'+r.total.toLocaleString()+'</td></tr>';
+      });
+    }
+    specHTML+='</tbody></table>';
+    specHTML+='<details style="font-size:12px"><summary style="cursor:pointer;color:#2563eb;font-weight:600;margin-bottom:8px">📋 物料明细</summary>';
+    specHTML+='<table style="width:100%;font-size:12px"><thead><tr style="background:#fafafa"><th>供应商</th><th>部件名称</th><th>物料名称</th><th>牌号</th><th>实际用量</th><th>单价</th><th>含税金额</th><th>小计</th></tr></thead><tbody>';
+    currentQuoteData.forEach(function(q){
+      var specs=q.specs||[];
+      var sp=null;
+      for(var i=0;i<specs.length;i++){
+        if((specs[i].name||"默认规格")===specName){sp=specs[i];break;}
+      }
+      if(sp&&sp.items){
+        sp.items.forEach(function(it){
+          var au=((Number(it.netUsage)||0)*(1+(Number(it.loss)||0)/100)).toFixed(2);
+          specHTML+='<tr><td>'+q.supplierName+'</td><td>'+(it.partName||"")+'</td><td>'+(it.materialName||"")+'</td><td>'+(it.materialCode||"")+'</td><td>'+au+'</td><td>¥'+(Number(it.unitPrice)||0).toLocaleString()+'</td><td>¥'+(Number(it.subtotal)||0).toLocaleString()+'</td><td>¥'+(Number(it.subtotal)||0).toLocaleString()+'</td></tr>';
+        });
+      }
+    });
+    specHTML+='</tbody></table></details></div>';
+  });
+}
+
+  costHTML+="</tbody></table></div>";
+}
+
+document.getElementById("qdContent").innerHTML=projHeader+specHTML+costHTML+'<div style="overflow-x:auto;margin-bottom:16px"><h4 style="margin-bottom:8px;color:#333">📋 物料报价对比</h4><table style="width:100%;font-size:13px"><thead><tr>'+hc+'</tr></thead><tbody>'+br+'</tbody></table></div>';
+}
+}
+
+function exportProjectQuotes(){
+var pid=currentQuoteProjectId;
+if(!pid)return toast("请先选择项目","error");
+window.open("http://localhost:3000/api/buyer/export/"+pid,"_blank");
+toast("正在下载Excel...","success");
+}
+
+function showCreateProjectModal(){document.getElementById("createProjectModal").classList.add("show");}
+
+var cpTechFiles=[];
+var bidFiles=[];
+
+var cpFiles=[];
+var cpChannelFiles=[];cpTechFiles=[];
+function handleCpTechFiles(fileList){
+  for(var i=0;i<fileList.length;i++){
+    var f=fileList[i];
+    if(f.size>50*1024*1024){toast(f.name+" 超过50MB限制","error");continue;}
+    var ext=f.name.split(".").pop().toLowerCase();
+    if(["pdf","zip","rar","dwg","dxf"].indexOf(ext)===-1){toast(f.name+" 格式不支持，仅限PDF/ZIP/CAD","error");continue;}
+    cpTechFiles.push(f);
+  }
+  renderCpTechFileList();
+  document.getElementById("cpTechFileInput").value="";
+}
+function renderCpTechFileList(){
+  var el=document.getElementById("cpTechAttachmentList");
+  if(cpTechFiles.length===0){el.innerHTML="未选择文件";return;}
+  el.innerHTML=cpTechFiles.map(function(f,i){
+    var sizeMB=(f.size/1024/1024).toFixed(1);
+    return "<div style=\x27font-size:10px;word-break:break-all;margin-bottom:2px\x27>"+f.name+" ("+sizeMB+"MB) <button class=\x27btn btn-outline btn-sm\x27 style=\x27padding:0 4px;font-size:10px\x27 onclick=\x27cpTechFiles.splice("+i+",1);renderCpTechFileList()\x27>\u00d7</button></div>";
+  }).join("");
+}
+function handleCpChannelFiles(fileList){
+  for(var i=0;i<fileList.length;i++){
+    var f=fileList[i];
+    if(f.size>50*1024*1024){toast(f.name+" 超过50MB限制","error");continue;}
+    var ext=f.name.split(".").pop().toLowerCase();
+    if(["pdf","zip","rar","dwg","dxf"].indexOf(ext)===-1){toast(f.name+" 格式不支持，仅限PDF/ZIP/CAD","error");continue;}
+    cpChannelFiles.push(f);
+  }
+  renderCpChannelFileList();
+  document.getElementById("cpChannelFileInput").value="";
+}
+function renderCpChannelFileList(){
+  var el=document.getElementById("cpChannelAttachmentList");
+  if(cpChannelFiles.length===0){el.innerHTML="未选择文件";return;}
+  el.innerHTML=cpChannelFiles.map(function(f,i){
+    var sizeMB=(f.size/1024/1024).toFixed(1);
+    return "<div style='font-size:10px;word-break:break-all;margin-bottom:2px'>"+f.name+" ("+sizeMB+"MB) <button class='btn btn-outline btn-sm' style='padding:0 4px;font-size:10px' onclick='cpChannelFiles.splice("+i+",1);renderCpChannelFileList()'>×</button></div>";
+  }).join("");
+}
+function handleCpFiles(fileList){
+  for(var i=0;i<fileList.length;i++){
+    var f=fileList[i];
+    if(f.size>50*1024*1024){toast(f.name+" 超过50MB限制","error");continue;}
+    var ext=f.name.split(".").pop().toLowerCase();
+    if(["pdf","zip","rar","dwg","dxf"].indexOf(ext)===-1){toast(f.name+" 格式不支持，仅限PDF/ZIP/CAD","error");continue;}
+    cpFiles.push(f);
+  }
+  renderCpFileList();
+  document.getElementById("cpFileInput").value="";
+}
+function renderCpFileList(){
+  var el=document.getElementById("cpAttachmentList");
+  if(cpFiles.length===0){el.innerHTML="未选择文件";return;}
+  el.innerHTML=cpFiles.map(function(f,i){
+    var sizeMB=(f.size/1024/1024).toFixed(1);
+    return "<div style='display:flex;align-items:center;gap:8px;padding:4px 8px;background:#f1f5f9;border-radius:4px;margin-bottom:4px'><span style='flex:1;font-size:12px'>"+f.name+" ("+sizeMB+"MB)</span><button class='btn btn-outline btn-sm' onclick='cpFiles.splice("+i+",1);renderCpFileList();' style='color:#e74c3c;padding:0 6px;font-size:11px'>×</button></div>";
+  }).join("");
+}
+async function uploadCpChannelFiles(){
+  var uploaded=[];
+  for(var i=0;i<cpChannelFiles.length;i++){
+    var fd=new FormData();
+    fd.append("file",cpChannelFiles[i]);
+    fd.append("projectId","new");
+    fd.append("uploadedBy",USER.account);
+    fd.append("originalFileName",cpChannelFiles[i].name);
+    try{
+      var r=await fetch(API+"/api/upload",{method:"POST",body:fd});
+      var data=await r.json();
+      if(data.success){uploaded.push({fileName:cpChannelFiles[i].name,fileUrl:(data.data.signed_url||data.data.storage_path),fileSize:cpChannelFiles[i].size,fileType:cpChannelFiles[i].type});}
+      else{toast(cpChannelFiles[i].name+" 上传失败: "+data.message,"error");}
+    }catch(e){toast(cpChannelFiles[i].name+" 上传失败","error");}
+  }
+  return uploaded;
+}
+async function uploadCpTechFiles(){
+  var uploaded=[];
+  for(var i=0;i<cpTechFiles.length;i++){
+    var fd=new FormData();
+    fd.append("file",cpTechFiles[i]);
+    fd.append("projectId","new");
+    fd.append("uploadedBy",USER.account);
+    fd.append("originalFileName",cpTechFiles[i].name);
+    try{
+      var r=await fetch(API+"/api/upload",{method:"POST",body:fd});
+      var data=await r.json();
+      if(data.success){uploaded.push({fileName:cpTechFiles[i].name,fileUrl:(data.data.signed_url||data.data.storage_path),fileSize:cpTechFiles[i].size,fileType:cpTechFiles[i].type});}
+      else{toast(cpTechFiles[i].name+" 上传失败: "+data.message,"error");}
+    }catch(e){toast(cpTechFiles[i].name+" 上传失败","error");}
+  }
+  return uploaded;
+}
+async function uploadCpFiles(){
+  var uploaded=[];
+  for(var i=0;i<cpFiles.length;i++){
+    var fd=new FormData();
+    fd.append("file",cpFiles[i]);
+    fd.append("projectId","new");
+    fd.append("uploadedBy",USER.account);
+    fd.append("originalFileName",cpFiles[i].name);
+    try{
+      var r=await fetch(API+"/api/upload",{method:"POST",body:fd});
+      var data=await r.json();
+      if(data.success){uploaded.push({fileName:cpFiles[i].name,fileUrl:(data.data.signed_url||data.data.storage_path),fileSize:cpFiles[i].size,fileType:cpFiles[i].type});}
+      else{toast(cpFiles[i].name+" 上传失败: "+data.message,"error");}
+    }catch(e){toast(cpFiles[i].name+" 上传失败","error");}
+  }
+  return uploaded;
+}
+
+async function createProject(){
+var name=document.getElementById("cpName").value;
+var deadline=document.getElementById("cpDeadline").value;
+var plan=document.getElementById("cpPlan").value;
+var channel=document.getElementById("cpChannel").value;
+var techParams=document.getElementById("cpTechParams").value;
+if(!name)return toast("请输入项目名称","error");
+var uploadedFiles=[];
+if(cpFiles.length>0){var f1=await uploadCpFiles();uploadedFiles=uploadedFiles.concat(f1);}
+if(cpChannelFiles.length>0){var f2=await uploadCpChannelFiles();uploadedFiles=uploadedFiles.concat(f2);}
+if(cpTechFiles.length>0){var f3=await uploadCpTechFiles();uploadedFiles=uploadedFiles.concat(f3);}
+var r=await api("/api/buyer/projects",{method:"POST",body:{buyerAccount:USER.account,projectName:name,deadline:deadline,plan:plan,channelDetails:channel,techParams:techParams,attachments:uploadedFiles}});
+if(r.success){closeModal("createProjectModal");loadBuyerProjects();toast("项目发布成功","success");}
+else{toast(r.message,"error");}
+}
+
+function switchMaterialTable(){
+  var cat=document.getElementById("bidCategory").value;
+  if(cat==="被子件套"){
+    isBeddingMode=true;
+  }else{
+    isBeddingMode=false;
+  }
+  // Reset all spec blocks - save template inner first
+  initSpecTemplateInner();
+  document.getElementById("bidSpecsContainer").innerHTML='<div class="spec-block" data-spec-idx="0">'+specTemplateInner+'<button class="btn btn-outline btn-sm" onclick="addBidItem(this)" style="margin-top:8px">+ 添加物料</button> <a href="#" onclick="downloadMaterialTemplate(event)" style="margin-left:12px;font-size:13px;color:#2563eb;text-decoration:underline;cursor:pointer">下载物料明细模板</a> <a href="#" onclick="uploadMaterialTemplate(event)" style="margin-left:8px;font-size:13px;color:#27ae60;text-decoration:underline;cursor:pointer">上传物料报价明细</a></div>';
+  specCounter=1;
+  renderTableHead();
+  addBidItem(document.querySelector("#bidSpecsContainer .spec-block .btn"));
+}
+var specTemplateInner="";
+function renderTableHead(){
+document.querySelectorAll("#bidSpecsContainer .spec-items-head").forEach(function(head){
+if(isBeddingMode){
+head.innerHTML='<tr><th>\u90e8\u4ef6\u540d\u79f0</th><th>\u7269\u6599\u540d\u79f0</th><th>\u7269\u6599\u724c\u53f7</th><th>\u514b\u91cd</th><th>\u89c4\u683c/\u5e45\u5bbd</th><th>\u51c0\u7528\u91cf</th><th>\u635f\u8017(%)</th><th>\u5b9e\u9645\u7528\u91cf</th><th>\u7269\u6599\u5355\u4ef7</th><th>\u542b\u7a0e\u91d1\u989d</th><th>\u5c0f\u8ba1</th><th></th></tr>';
+}else{
+head.innerHTML='<tr><th>\u7269\u6599\u540d\u79f0</th><th>\u7f16\u7801</th><th>\u89c4\u683c</th><th>\u6570\u91cf</th><th>\u5355\u4f4d</th><th>\u5355\u4ef7(\u00a5)</th><th>\u5c0f\u8ba1(\u00a5)</th><th></th></tr>';
+}
+});
+}
+
+function addBidItem(btnOrData){
+var btnEl=(btnOrData instanceof HTMLElement||(btnOrData&&btnOrData.nodeType===1))?btnOrData:null;
+var data=(btnEl||typeof btnOrData!=="object")?{}:btnOrData;
+// Find nearest spec-block
+var block=btnEl?btnEl.closest(".spec-block"):document.querySelector("#bidSpecsContainer .spec-block");
+if(!block)return;
+var tbody=block.querySelector(".spec-items-body");
+if(!tbody)return;
+var row=document.createElement("tr");
+if(isBeddingMode){
+row.innerHTML='<td><input value="'+(data.partName||"")+'"></td><td><input value="'+(data.materialName||data.name||"")+'"></td><td><input value="'+(data.materialCode||"")+'"></td><td><input type="number" value="'+(data.weight||"")+'" onchange="calcBidTotal()"></td><td><input type="number" step="any" value="'+(data.spec||data.width||"")+'" onchange="calcBidTotal()"></td><td><input type="number" value="'+(data.netUsage||"")+'" onchange="calcBidTotal()"></td><td><input type="number" value="'+(data.loss||"")+'" style="width:60px" onchange="calcBidTotal()"></td><td class="item-actual">0</td><td><input type="number" value="'+(data.unitPrice||"")+'" onchange="calcBidTotal()"></td><td class="item-tax">0</td><td class="item-subtotal">0</td><td><button class="btn btn-outline btn-sm" onclick="var tr=this.closest(\x27tr\x27);if(tr)tr.remove();calcBidTotal()" style="color:#e74c3c">×</button></td>';
+}else{
+row.innerHTML='<td><input value="'+(data.name||"")+'"></td><td><input value="'+(data.materialCode||"")+'"></td><td><input value="'+(data.spec||"")+'"></td><td><input type="number" value="'+(data.qty||"")+'" style="width:60px" onchange="calcBidTotal()"></td><td><input value="'+(data.unit||"")+'" style="width:50px"></td><td><input type="number" value="'+(data.unitPrice||"")+'" onchange="calcBidTotal()"></td><td class="item-subtotal">0</td><td><button class="btn btn-outline btn-sm" onclick="var tr=this.closest(\x27tr\x27);if(tr)tr.remove();calcBidTotal()" style="color:#e74c3c">×</button></td>';
+}
+tbody.appendChild(row);
+calcBidTotal();
+}
+
+function calcBidTotal(){
+var grandMaterialTotal=0,grandLabor=0,grandMfg=0,grandAdmin=0,grandProfit=0,grandTax=0;
+document.querySelectorAll("#bidSpecsContainer .spec-block").forEach(function(block){
+  var materialTotal=0;
+  block.querySelectorAll(".spec-items-body tr").forEach(function(row){
+    var inputs=row.querySelectorAll("input");
+    if(isBeddingMode){
+      var gramWeight=Number(inputs[3]&&inputs[3].value)||0;
+      var specWidth=Number(inputs[4]&&inputs[4].value)||0;
+      var netUsage=Number(inputs[5]&&inputs[5].value)||0;
+      var loss=Number(inputs[6]&&inputs[6].value)||0;
+      var actualUsage=netUsage*(1+loss/100);
+      var unitPrice=Number(inputs[7]&&inputs[7].value)||0;
+      var taxAmount=(gramWeight===0&&specWidth===0)?actualUsage*unitPrice:gramWeight*specWidth*actualUsage*unitPrice/100000;
+      var elAct=row.querySelector(".item-actual");if(elAct)elAct.textContent=actualUsage.toFixed(2);
+      var elTax=row.querySelector(".item-tax");if(elTax)elTax.textContent=taxAmount.toFixed(2);
+      var elSub=row.querySelector(".item-subtotal");if(elSub)elSub.textContent=taxAmount.toFixed(2);
+      materialTotal+=taxAmount;
+    }else{
+      var qty=Number(inputs[3]&&inputs[3].value)||0;
+      var price=Number(inputs[5]&&inputs[5].value)||0;
+      var subtotal=qty*price;
+      var elSub2=row.querySelector(".item-subtotal");if(elSub2)elSub2.textContent=subtotal.toLocaleString();
+      materialTotal+=subtotal;
+    }
+  });
+  var mc=block.querySelector(".spec-material-cost");if(mc)mc.value=materialTotal.toFixed(2);
+  var labor=Number((block.querySelector(".spec-labor")||{}).value)||0;
+  var mfg=Number((block.querySelector(".spec-mfg")||{}).value)||0;
+  var admin=Number((block.querySelector(".spec-admin")||{}).value)||0;
+  var profit=Number((block.querySelector(".spec-profit")||{}).value)||0;
+  var tax=Number((block.querySelector(".spec-tax")||{}).value)||0;
+  var blockTotal=materialTotal+labor+mfg+admin+profit+tax;
+  var cs=block.querySelector(".spec-cost-summary");if(cs)cs.textContent="\u00a5"+blockTotal.toLocaleString();
+  grandMaterialTotal+=materialTotal;grandLabor+=labor;grandMfg+=mfg;grandAdmin+=admin;grandProfit+=profit;grandTax+=tax;
+});
+document.getElementById("bidTotalDisplay").textContent=(grandMaterialTotal+grandLabor+grandMfg+grandAdmin+grandProfit+grandTax).toLocaleString();
+}
+function collectBidItems(){
+var items=[];
+document.querySelectorAll("#bidSpecsContainer .spec-block").forEach(function(block){
+  block.querySelectorAll(".spec-items-body tr").forEach(function(row){
+    var inputs=row.querySelectorAll("input");
+    if(isBeddingMode){
+      var gw=Number(inputs[3]&&inputs[3].value)||0;
+      var sw=Number(inputs[4]&&inputs[4].value)||0;
+      var nu=Number(inputs[5]&&inputs[5].value)||0;
+      var lo=Number(inputs[6]&&inputs[6].value)||0;
+      var au=nu*(1+lo/100);
+      var up=Number(inputs[7]&&inputs[7].value)||0;
+      var ta=(gw===0&&sw===0)?au*up:gw*sw*au*up/100000;
+      items.push({
+        partName:inputs[0]&&inputs[0].value||"",
+        materialName:inputs[1]&&inputs[1].value||"",
+        materialCode:inputs[2]&&inputs[2].value||"",
+        weight:gw,
+        spec:inputs[4]&&inputs[4].value||"",
+        netUsage:nu,
+        loss:lo,
+        actualUsage:au,
+        unitPrice:up,
+        taxAmount:ta,
+        subtotal:ta
+      });
+    }else{
+      items.push({
+        name:inputs[0]&&inputs[0].value||"",
+        materialCode:inputs[1]&&inputs[1].value||"",
+        spec:inputs[2]&&inputs[2].value||"",
+        qty:Number(inputs[3]&&inputs[3].value)||0,
+        unit:inputs[4]&&inputs[4].value||"",
+        unitPrice:Number(inputs[5]&&inputs[5].value)||0
+      });
+    }
+  });
+});
+return items;
+}
+
+// ===== Multi-spec support =====
+var specCounter=1;
+function downloadMaterialTemplate(e){if(e)e.preventDefault();var csv="";if(isBeddingMode){csv="\u90E8\u4EF6\u540D\u79F0,\u7269\u6599\u540D\u79F0,\u7269\u6599\u724C\u53F7,\u514B\u91CD,\u89C4\u683C/\u5E45\u5BBD,\u51C0\u7528\u91CF,\u635F\u8017(%),\u7269\u6599\u5355\u4EF7\n\u88AB\u5957,\u7EAF\u68C9\u9762\u6599,BT-60S-C,120,2.3,2.5,3,45\n\u5E8A\u5355,\u7EAF\u68C9\u9762\u6599,CD-60S-C,120,2.5,2,3,35\n\u6795\u5957,\u7EAF\u68C9\u9762\u6599,ZT-60S-C,80,1.5,0.8,3,12\n\u88AB\u82AF,\u7FBD\u7ED2\u586B\u5145,BX-90R,200,1.5,3,2,120\n";}else{csv="\u7269\u6599\u540D\u79F0,\u7F16\u7801,\u89C4\u683C,\u6570\u91CF,\u5355\u4F4D,\u5355\u4EF7(\u00A5)\n\u793A\u4F8B\u7269\u6599,MAT-001,\u89C4\u683CA,10,\u4E2A,50\n";}var BOM="\uFEFF";var blob=new Blob([BOM+csv],{type:"text/csv;charset=utf-8"});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download="\u7269\u6599\u660E\u7EC6\u6A21\u677F.csv";a.click();URL.revokeObjectURL(url);}
+
+function uploadMaterialTemplate(e){if(e)e.preventDefault();var block=e.target.closest(".spec-block")||document.querySelector("#bidSpecsContainer .spec-block");var inp=document.createElement("input");inp.type="file";inp.accept=".csv";inp.onchange=function(){var file=inp.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(ev){var text=ev.target.result;var lines=text.split(/\r?\n/).filter(function(l){return l.trim();});if(lines.length<2)return toast("CSV格式不正确","error");if(!block)return;var tbody=block.querySelector(".spec-items-body");if(!tbody)return;tbody.innerHTML="";for(var i=1;i<lines.length;i++){var cols=lines[i].split(",");if(cols.length<2)continue;var row=document.createElement("tr");if(isBeddingMode&&cols.length>=8){row.innerHTML='<td><input value="'+(cols[0]||"")+'"></td><td><input value="'+(cols[1]||"")+'"></td><td><input value="'+(cols[2]||"")+'"></td><td><input type="number" value="'+(cols[3]||"")+'" onchange="calcBidTotal()"></td><td><input type="number" step="any" value="'+(cols[4]||"")+'" onchange="calcBidTotal()"></td><td><input type="number" value="'+(cols[5]||"")+'" onchange="calcBidTotal()"></td><td><input type="number" value="'+(cols[6]||"")+'" style="width:60px" onchange="calcBidTotal()"></td><td class="item-actual">0</td><td><input type="number" value="'+(cols[7]||"")+'" onchange="calcBidTotal()"></td><td class="item-tax">0</td><td class="item-subtotal">0</td><td><button class="btn btn-outline btn-sm" onclick="var tr=this.closest(\'tr\');if(tr)tr.remove();calcBidTotal()" style="color:#e74c3c">\u00d7</button></td>';}else if(cols.length>=6){row.innerHTML='<td><input value="'+(cols[0]||"")+'"></td><td><input value="'+(cols[1]||"")+'"></td><td><input value="'+(cols[2]||"")+'"></td><td><input type="number" value="'+(cols[3]||"")+'" style="width:60px" onchange="calcBidTotal()"></td><td><input value="'+(cols[4]||"")+'" style="width:50px"></td><td><input type="number" value="'+(cols[5]||"")+'" onchange="calcBidTotal()"></td><td class="item-subtotal">0</td><td><button class="btn btn-outline btn-sm" onclick="var tr=this.closest(\'tr\');if(tr)tr.remove();calcBidTotal()" style="color:#e74c3c">\u00d7</button></td>';}else{continue;}tbody.appendChild(row);}calcBidTotal();toast("\u5df2\u5bfc\u5165"+ (lines.length-1) +"\u6761\u7269\u6599","success");};reader.readAsText(file,"utf-8");};inp.click();}
+
+function initSpecTemplateInner(){
+  var block=document.querySelector("#bidSpecsContainer .spec-block");
+  if(block&&!specTemplateInner){
+    var clone=block.cloneNode(true);
+    var btns=clone.querySelectorAll("button");
+    btns.forEach(function(b){b.remove();});
+    var links=clone.querySelectorAll('a[onclick*="downloadMaterialTemplate"]');
+    links.forEach(function(a){a.remove();});
+    var ulinks=clone.querySelectorAll('a[onclick*="uploadMaterialTemplate"]');
+    ulinks.forEach(function(a){a.remove();});
+    specTemplateInner=clone.innerHTML;
+  }
+}
+function addNewSpec(){
+  initSpecTemplateInner();
+  var container=document.getElementById("bidSpecsContainer");
+  if(!container)return;
+  var div=document.createElement("div");
+  div.className="spec-block";
+  div.setAttribute("data-spec-idx",specCounter);
+  div.innerHTML=specTemplateInner;
+  var btn=document.createElement("button");
+  btn.className="btn btn-outline btn-sm";
+  btn.textContent="+ \u6dfb\u52a0\u7269\u6599";
+  btn.onclick=function(){addBidItem(this);};
+  btn.style.marginTop="8px";
+  div.appendChild(btn);
+  var dl=document.createElement("a");dl.href="#";dl.onclick=function(e){downloadMaterialTemplate(e);};dl.style.cssText="margin-left:12px;font-size:13px;color:#2563eb;text-decoration:underline;cursor:pointer;white-space:nowrap";dl.textContent="下载物料明细模板";div.appendChild(dl);var ul=document.createElement("a");ul.href="#";ul.onclick=function(e){uploadMaterialTemplate(e);};ul.style.cssText="margin-left:8px;font-size:13px;color:#27ae60;text-decoration:underline;cursor:pointer";ul.textContent="上传物料报价明细";div.appendChild(ul);
+  div.querySelectorAll("input").forEach(function(inp){
+    inp.value=inp.type==="number"?"0":"";
+  });
+  var matBody=div.querySelector(".spec-items-body");if(matBody)matBody.innerHTML="";
+  var head=div.querySelector(".spec-items-head");
+  if(head){
+    if(isBeddingMode){
+      head.innerHTML='<tr><th>\u90e8\u4ef6\u540d\u79f0</th><th>\u7269\u6599\u540d\u79f0</th><th>\u7269\u6599\u724c\u53f7</th><th>\u514b\u91cd</th><th>\u89c4\u683c/\u5e45\u5bbd</th><th>\u51c0\u7528\u91cf</th><th>\u635f\u8017(%)</th><th>\u5b9e\u9645\u7528\u91cf</th><th>\u7269\u6599\u5355\u4ef7</th><th>\u542b\u7a0e\u91d1\u989d</th><th>\u5c0f\u8ba1</th><th></th></tr>';
+    }else{
+      head.innerHTML='<tr><th>\u7269\u6599\u540d\u79f0</th><th>\u7f16\u7801</th><th>\u89c4\u683c</th><th>\u6570\u91cf</th><th>\u5355\u4f4d</th><th>\u5355\u4ef7(\u00a5)</th><th>\u5c0f\u8ba1(\u00a5)</th><th></th></tr>';
+    }
+  }
+  container.appendChild(div);
+  // 费用拆分格式复用（保留结构，值归零）
+  // 复制物料明细表从第一个规格
+  var firstSpec = container.querySelector(".spec-block");
+  if (firstSpec && firstSpec !== div) {
+    var srcBody = firstSpec.querySelector(".spec-items-body");
+    var dstBody = div.querySelector(".spec-items-body");
+    if (srcBody && dstBody && srcBody.children.length > 0) {
+      dstBody.innerHTML = srcBody.innerHTML;
+    }
+  }
+  calcBidTotal();
+  specCounter++;
+  toast("\u65b0\u89c4\u683c\u5df2\u6dfb\u52a0","success");
+}
+function collectAllSpecs(){
+  var specs=[];
+  document.querySelectorAll("#bidSpecsContainer .spec-block").forEach(function(block){
+    var nameInput=block.querySelector(".spec-name-input");
+    var name=nameInput?nameInput.value.trim():"";
+    if(!name)name="\u89c4\u683c"+(specs.length+1);
+    var items=[];
+    block.querySelectorAll(".spec-items-body tr").forEach(function(row){
+      var inputs=row.querySelectorAll("input");
+      if(inputs.length===0)return;
+      if(isBeddingMode){
+        var gw=Number(inputs[3]&&inputs[3].value)||0;
+        var sw=Number(inputs[4]&&inputs[4].value)||0;
+        var nu=Number(inputs[5]&&inputs[5].value)||0;
+        var lo=Number(inputs[6]&&inputs[6].value)||0;
+        var au=nu*(1+lo/100);
+        var up=Number(inputs[7]&&inputs[7].value)||0;
+        var ta=(gw===0&&sw===0)?au*up:gw*sw*au*up/100000;
+        items.push({partName:inputs[0]&&inputs[0].value||"",materialName:inputs[1]&&inputs[1].value||"",materialCode:inputs[2]&&inputs[2].value||"",weight:gw,spec:inputs[4]&&inputs[4].value||"",netUsage:nu,loss:lo,actualUsage:au,unitPrice:up,taxAmount:ta,subtotal:ta});
+      }else{
+        items.push({name:inputs[0]&&inputs[0].value||"",materialCode:inputs[1]&&inputs[1].value||"",spec:inputs[2]&&inputs[2].value||"",qty:Number(inputs[3]&&inputs[3].value)||0,unit:inputs[4]&&inputs[4].value||"",unitPrice:Number(inputs[5]&&inputs[5].value)||0});
+      }
+    });
+    if(items.length===0)return;
+    var labor=Number((block.querySelector(".spec-labor")||{}).value)||0;
+    var mfg=Number((block.querySelector(".spec-mfg")||{}).value)||0;
+    var admin=Number((block.querySelector(".spec-admin")||{}).value)||0;
+    var profit=Number((block.querySelector(".spec-profit")||{}).value)||0;
+    var tax=Number((block.querySelector(".spec-tax")||{}).value)||0;
+    specs.push({name:name,items:items,laborCost:labor,manufacturingCost:mfg,adminCost:admin,profit:profit,tax:tax});
+  });
+  return specs;
+}
+function handleBidFiles(fileList){
+  for(var i=0;i<fileList.length;i++){
+    var f=fileList[i];
+    if(f.size>50*1024*1024){toast(f.name+" 超过50MB限制","error");continue;}
+    bidFiles.push(f);
+  }
+  renderBidFileList();
+  document.getElementById("bidFileInput").value="";
+}
+function renderBidFileList(){
+  var el=document.getElementById("bidAttachmentList");
+  if(bidFiles.length===0){el.innerHTML="未选择文件";return;}
+  el.innerHTML=bidFiles.map(function(f,i){
+    var sizeMB=(f.size/1024/1024).toFixed(1);
+    return "<div style=\x27display:flex;align-items:center;gap:8px;padding:4px 8px;background:#f1f5f9;border-radius:4px;margin-bottom:4px\x27><span style=\x27flex:1;font-size:12px\x27>"+f.name+" ("+sizeMB+"MB)</span><button class=\x27btn btn-outline btn-sm\x27 onclick=\x27bidFiles.splice("+i+",1);renderBidFileList();\x27 style=\x27color:#e74c3c;padding:0 6px;font-size:11px\x27>×</button></div>";
+  }).join("");
+}
+async function uploadBidFiles(){
+  var uploaded=[];
+  for(var i=0;i<bidFiles.length;i++){
+    var fd=new FormData();
+    fd.append("file",bidFiles[i]);
+    fd.append("projectId",currentBidProjectId);
+    fd.append("uploadedBy",USER.account);
+    fd.append("originalFileName",bidFiles[i].name);
+    try{
+      var r=await fetch(API+"/api/upload",{method:"POST",body:fd});
+      var data=await r.json();
+      if(data.success){uploaded.push(data.data);}
+      else{toast(bidFiles[i].name+" 上传失败: "+data.message,"error");}
+    }catch(e){toast(bidFiles[i].name+" 上传失败","error");}
+  }
+  return uploaded;
+}
+
+async function submitBid(){
+var allSpecs=collectAllSpecs();
+var items=[];
+allSpecs.forEach(function(sp){sp.items.forEach(function(it){items.push(it);});});
+if(items.length===0)return toast("\u8bf7\u81f3\u5c11\u6dfb\u52a0\u4e00\u4e2a\u7269\u6599","error");
+var supplierName=document.getElementById("bidSupplierName").value;
+if(!supplierName)return toast("\u8bf7\u8f93\u5165\u4f9b\u5e94\u5546\u540d\u79f0","error");
+var uploadedFiles=[];
+if(bidFiles.length>0){uploadedFiles=await uploadBidFiles();}
+var total=allSpecs.reduce(function(s,sp){
+  var m=sp.items.reduce(function(ss,it){return ss+(Number(it.subtotal)||0);},0);
+  return s+m+sp.laborCost+sp.manufacturingCost+sp.adminCost+sp.profit+sp.tax;
+},0);
+var body={
+  projectId:currentBidProjectId,
+  supplierAccount:USER.account,
+  supplierName:supplierName,
+  items:items,
+  specs:allSpecs,
+  attachments:uploadedFiles,
+  total:total,
+  laborCost:allSpecs.reduce(function(s,sp){return s+(sp.laborCost||0);},0),
+  manufacturingCost:allSpecs.reduce(function(s,sp){return s+(sp.manufacturingCost||0);},0),
+  adminCost:allSpecs.reduce(function(s,sp){return s+(sp.adminCost||0);},0),
+  profit:allSpecs.reduce(function(s,sp){return s+(sp.profit||0);},0),
+  tax:allSpecs.reduce(function(s,sp){return s+(sp.tax||0);},0),
+  category:document.getElementById("bidCategory").value,
+  validity:document.getElementById("bidValidity").value
+};
+var r=await api("/api/supplier/bid",{method:"POST",body:body});
+if(r.success){toast("\u62a5\u4ef7\u63d0\u4ea4\u6210\u529f","success");closeModal('bidModal');loadSupplierProjects();}
+else{toast(r.message,"error");}
+}
+async function openBidForm(pid,bidId){
+currentBidProjectId=pid;
+currentBidId=bidId||"";
+document.getElementById("bidTitle").textContent=bidId?"\u4fee\u6539\u62a5\u4ef7":"\u586b\u5199\u62a5\u4ef7";
+initSpecTemplateInner();
+var container=document.getElementById("bidSpecsContainer");
+var defaultBlock='<div class="spec-block" data-spec-idx="0">'+specTemplateInner+'<button class="btn btn-outline btn-sm" onclick="addBidItem(this)" style="margin-top:8px">+ \u6dfb\u52a0\u7269\u6599</button></div>';
+container.innerHTML=defaultBlock;
+specCounter=1;
+document.getElementById("bidSupplierName").value=USER.name||USER.account||"";
+document.getElementById("bidCategory").value="";
+document.getElementById("bidValidity").value="";
+bidFiles=[];
+document.getElementById("bidAttachmentList").innerHTML="\u672a\u9009\u62e9\u6587\u4ef6";
+document.getElementById("bidTotalDisplay").textContent="0";
+
+if(bidId){
+  try{
+    var r=await api("/api/supplier/bid/"+bidId+"?account="+encodeURIComponent(USER.account));
+    if(r.success&&r.data){
+      var b=r.data;
+      document.getElementById("bidSupplierName").value=b.supplierName||"";
+      document.getElementById("bidCategory").value=b.category||"";
+      if(b.category==="\u88ab\u5b50\u4ef6\u5957"){isBeddingMode=true;}
+      document.getElementById("bidValidity").value=b.validity||"";
+      var specs=b.specs||[];
+      var items=b.items||[];
+      if(typeof items==="string"){try{items=JSON.parse(items);}catch(e){items=[];}}
+      if(typeof specs==="string"){try{specs=JSON.parse(specs);}catch(e){specs=[];}}
+      if(b.category==="\u88ab\u5b50\u4ef6\u5957"||(items.length>0&&items[0].partName!==undefined)){
+        isBeddingMode=true;
+      }
+      renderTableHead();
+      if(specs.length>0){
+        container.innerHTML="";
+        specs.forEach(function(sp,idx){
+          var div=document.createElement("div");
+          div.className="spec-block";
+          div.setAttribute("data-spec-idx",idx);
+          div.innerHTML=specTemplateInner;
+          var btn=document.createElement("button");
+          btn.className="btn btn-outline btn-sm";
+          btn.textContent="+ \u6dfb\u52a0\u7269\u6599";
+          btn.onclick=function(){addBidItem(this);};
+          btn.style.marginTop="8px";
+          div.appendChild(btn);
+          var ddl=document.createElement("a");ddl.href="#";ddl.onclick=function(e){downloadMaterialTemplate(e);};ddl.style.cssText="margin-left:12px;font-size:13px;color:#2563eb;text-decoration:underline;cursor:pointer;white-space:nowrap";ddl.textContent="下载物料明细模板";div.appendChild(ddl);var uul=document.createElement("a");uul.href="#";uul.onclick=function(e){uploadMaterialTemplate(e);};uul.style.cssText="margin-left:8px;font-size:13px;color:#27ae60;text-decoration:underline;cursor:pointer";uul.textContent="上传物料报价明细";div.appendChild(uul);
+          container.appendChild(div);
+          var sni=div.querySelector(".spec-name-input");
+          if(sni)sni.value=sp.name||"";
+          var sl=div.querySelector(".spec-labor");if(sl)sl.value=sp.laborCost||0;
+          var sm=div.querySelector(".spec-mfg");if(sm)sm.value=sp.manufacturingCost||0;
+          var sa=div.querySelector(".spec-admin");if(sa)sa.value=sp.adminCost||0;
+          var sf=div.querySelector(".spec-profit");if(sf)sf.value=sp.profit||0;
+          var st=div.querySelector(".spec-tax");if(st)st.value=sp.tax||0;
+          var tbody=div.querySelector(".spec-items-body");
+          (sp.items||[]).forEach(function(it){
+            if(!tbody)return;
+            var row=document.createElement("tr");
+            if(isBeddingMode){
+              row.innerHTML='<td><input value="'+(it.partName||"")+'"></td><td><input value="'+(it.materialName||it.name||"")+'"></td><td><input value="'+(it.materialCode||"")+'"></td><td><input type="number" value="'+(it.weight||"")+'" onchange="calcBidTotal()"></td><td><input type="number" step="any" value="'+(it.spec||it.width||"")+'" onchange="calcBidTotal()"></td><td><input type="number" value="'+(it.netUsage||"")+'" onchange="calcBidTotal()"></td><td><input type="number" value="'+(it.loss||"")+'" style="width:60px" onchange="calcBidTotal()"></td><td class="item-actual">0</td><td><input type="number" value="'+(it.unitPrice||"")+'" onchange="calcBidTotal()"></td><td class="item-tax">0</td><td class="item-subtotal">0</td><td><button class="btn btn-outline btn-sm" onclick="var tr=this.closest(\'tr\');if(tr)tr.remove();calcBidTotal()" style="color:#e74c3c">\u00d7</button></td>';
+            }else{
+              row.innerHTML='<td><input value="'+(it.name||"")+'"></td><td><input value="'+(it.materialCode||"")+'"></td><td><input value="'+(it.spec||"")+'"></td><td><input type="number" value="'+(it.qty||"")+'" style="width:60px" onchange="calcBidTotal()"></td><td><input value="'+(it.unit||"")+'" style="width:50px"></td><td><input type="number" value="'+(it.unitPrice||"")+'" onchange="calcBidTotal()"></td><td class="item-subtotal">0</td><td><button class="btn btn-outline btn-sm" onclick="var tr=this.closest(\'tr\');if(tr)tr.remove();calcBidTotal()" style="color:#e74c3c">\u00d7</button></td>';
+            }
+            tbody.appendChild(row);
+          });
+          specCounter=idx+1;
+        });
+      }else{
+        renderTableHead();
+        items.forEach(function(it){addBidItem(it);});
+      }
+      calcBidTotal();
+    }
+  }catch(e){toast("\u52a0\u8f7d\u62a5\u4ef7\u6570\u636e\u5931\u8d25","error");}
+}else{
+  isBeddingMode=false;
+  renderTableHead();
+  addBidItem(document.querySelector("#bidSpecsContainer .spec-block .btn"));
+}
+
+  try{
+    var prjRes=await api("/api/projects/"+pid);
+    if(prjRes.success&&prjRes.data){
+      var prj=prjRes.data;
+      document.getElementById("bidProjectInfo").style.display="block";
+      document.getElementById("bidProjectName").textContent=prj.projectName||"--";
+      document.getElementById("bidProjectDeadline").textContent=prj.deadline||"--";
+      var attHtml="";
+      if(prj.plan)attHtml+="<div style=\x27margin-bottom:4px\x27><strong>\u9879\u76ee\u4f01\u5212\uff1a</strong>"+prj.plan+"</div>";
+      if(prj.channelDetails)attHtml+="<div style=\x27margin-bottom:4px\x27><strong>\u6e20\u9053\u62a5\u91cf\uff1a</strong>"+prj.channelDetails+"</div>";
+      if(prj.techParams)attHtml+="<div style=\x27margin-bottom:4px\x27><strong>\u6280\u672f\u53c2\u6570\uff1a</strong>"+prj.techParams+"</div>";
+      if(prj.attachments&&prj.attachments.length>0){
+        attHtml+="<div style=\x27margin-top:8px\x27><strong>\u9644\u4ef6\u6587\u4ef6\uff1a</strong></div>";
+        prj.attachments.forEach(function(att){
+          attHtml+="<div style=\x27display:flex;align-items:center;gap:8px;padding:4px 8px;background:#f1f5f9;border-radius:4px;margin:4px 0\x27><span style=\x27flex:1;font-size:12px\x27>"+att.fileName+"</span><a href=\x27"+API+(att.fileUrl||att.signed_url||att.storage_path||att.url||"")+"\x27 class=\x27btn btn-outline btn-sm\x27 style=\x27font-size:11px\x27 download=\x27"+att.fileName+"\x27>\U0001f4e5 \u4e0b\u8f7d</a></div>";
+        });
+      }else{attHtml+="<div>\u6682\u65e0\u9644\u4ef6</div>";}
+      document.getElementById("bidProjectAttachments").innerHTML=attHtml;
+    }
+  }catch(e){document.getElementById("bidProjectAttachments").innerHTML="\u52a0\u8f7d\u5931\u8d25";}
+  document.getElementById("bidModal").classList.add("show");
+}
+// Replace old functions
+function openSupplierBid(pid,bidId){ openBidForm(pid,bidId||""); }
+function editSupplierBid(bidId,projectId){ openBidForm(projectId,bidId); }
+
+
+
+// === INITIALIZATION ===
+(function init(){
+  if(!USER.account){
+    window.location.href='login.html';
+    return;
+  }
+  document.getElementById('displayAccount').textContent=USER.name||USER.account;
+  document.getElementById('displayRole').textContent=roleMap[USER.role]||USER.role;
+  buildSidebar();
+  var defaultViews={supplier:'supplier-projects',buyer:'buyer-projects',reviewer:'reviewer-projects'};
+  var defaultView=defaultViews[USER.role]||'supplier-projects';
+  switchView(defaultView);
+})();
+</script>
+</body>
+</html>
+
