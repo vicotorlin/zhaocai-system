@@ -111,6 +111,7 @@ app.post("/api/send-code", async (req, res) => {
   }
 
   const code = generateCode();
+  console.log("[CODE] " + account + " -> " + code);
   const expiresAt = now() + CODE_EXPIRE_SECONDS * 1000;
 
   // Supabase 存储
