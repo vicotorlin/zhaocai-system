@@ -125,7 +125,7 @@ app.post("/api/send-code", async (req, res) => {
     const t = getTransporter();
     if (!t) {
       console.log("[邮件] " + account + " -> " + code + " (SMTP未配置)");
-      return res.json({ success: true, message: "验证码已生成（邮件服务未配置）", code: IS_PROD ? undefined : code });
+      return res.json({ success: true, message: "验证码已生成（邮件服务未配置）", code: code });
     }
     t.sendMail({
       from: EMAIL_CONFIG.auth.user,
