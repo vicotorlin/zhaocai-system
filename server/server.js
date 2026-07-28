@@ -1462,7 +1462,22 @@ async function seedDefaultUsers() {
 // Railway 健康检查
 
 // 版本检查端点
-app.get("/api/version", (req, res) => res.json({ commit: "d600951", time: new Date().toISOString() }));
+
+// 开发：获取验证码（仅用于测试）
+app.get("/api/dev/get-code/:account", async (req, res) => {
+  const record = await db.getVerificationCode(req.params.account).catch(() => null);
+  if (!record) return res.json({ success: false, message: "无记录" });
+  res.json({ success: true, code: record.code, expires: record.expires_at });
+});
+
+// 开发：删除用户
+app.delete("/api/dev/delete-user/:account", async (req, res) => {
+  const account = req.params.account;
+  const result = await db.deleteUser(account);
+  if (!result) return res.json({ success: false, message: "用户不存在" });
+  res.json({ success: true, message: "已删除" });
+});
+app.get("/api/version", (req, res) => res.json({ commit: "fixed", time: new Date().toISOString() }));
 app.get('/', (req, res) => res.send('OK'));
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
